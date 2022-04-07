@@ -1,6 +1,5 @@
 #include "boot_cfg.h"
 #include "debug_tools.h"
-#include "nvs_tools.h"
 #include "esp32-hal-psram.h"
 #include "esp_log.h"
 #include "esp_partition.h"
@@ -8,17 +7,6 @@
 
 #include <list>
 #include <memory>
-AladinStatus_t BootConfig_t::lastStatus;
-
-#define MAX_RESET_FACTORY "MaxRestFac"
-#define IS_NEED_VALIDATION "IsNeedValidation"
-#define PS_RAM_OK "psRamOK"
-#define IS_ROLLED_BACK "IsRolledBack"
-#define LAST_STATUS "lastStatus"
-#define OTA_STATUS "otaState"
-#define REBOOT_COUNTER "rebootCounter"
-#define BOOT_REASON "bootReason"
-
 /**
  * @brief reset to factory APP partition and reboot ( force)
  *
@@ -30,8 +18,6 @@ esp_err_t BootConfig_t::RestoreFactory()
     {
         esp_ota_set_boot_partition(factoryApp); //! FACTORY RESET
         rebootCounter = 0;
-        NvsPointer storage = OPEN_NVS_W(TAG);
-        storage->set("rebootCounter", rebootCounter);
         otaState = ESP_OTA_IMG_UNDEFINED;
         esp_restart();
     }
@@ -55,7 +41,6 @@ esp_err_t BootConfig_t::CheckCurrentOTAPartitionStatus() const
  */
 esp_err_t BootConfig_t::Boot()
 {
-    InitThisConfig();
     if (IsFactoryRolledBack())
     {
         ESP_LOGW(TAG, "Rollback took place ! booted FACTORY partition");
@@ -70,7 +55,6 @@ esp_err_t BootConfig_t::Boot()
     if (bootReason == POWERON_RESET)
     {
 
-        AddWarningCode(GetResetReasonString(bootReason) + "reboot counter = " + std::to_string(rebootCounter));
         rebootCounter = 0;
     }
     else if (rebootCounter > MaxRebootCountTriggerFactory && bootReason == SW_RESET) // check if too much reboot occured
@@ -83,21 +67,17 @@ esp_err_t BootConfig_t::Boot()
         if (bootReason == reason)
         {
             rebootCounter++;
-            AddErrorCode("Reboot Reason :" + reasonStr);
             break;
         }
     }
     if (otaState == ESP_OTA_IMG_PENDING_VERIFY)
     {
         ESP_LOGW(TAG, "new OTA image Pending validation");
-        AddWarningCode("new OTA image Pending verify :" + reasonStr);
     }
     else
     {
         rebootCounter++;
-        AddErrorCode("Reboot Reason:" + reasonStr);
     }
-    SaveToNVS(); // save the counter and current status
     ESP_LOGW("Reboot Reason:", "%s , count=%d", reasonStr.c_str(), rebootCounter);
     return ESP_OK;
 }
@@ -165,8 +145,6 @@ esp_err_t BootConfig_t::SetValidOtaImage()
         {
             CheckCurrentOTAPartitionStatus();
             ESP_LOGW(TAG, "new OTA image validated !! ");
-            NvsPointer storage = OPEN_NVS_W(TAG);
-            storage->set("otaState", (int)otaState);
         }
     }
     return ret;
@@ -193,143 +171,9 @@ esp_err_t BootConfig_t::EraseInvalidApp()
 void BootConfig_t::SetInvalidOtaImageAndReboot()
 {
     otaState = ESP_OTA_IMG_INVALID;
-    NvsPointer storage = OPEN_NVS_W(TAG);
-    storage->set("otaState", (int)otaState);
-    storage->close();
     esp_ota_mark_app_invalid_rollback_and_reboot();
 }
 
-esp_err_t BootConfig_t::SetConfigurationParameters(const json &config_in)
-{
-    esp_err_t ret = ESP_FAIL;
-    if (config_in[TAG].contains("params") != 0)
-    {
-        auto &bootconfig = config_in[TAG]["params"];
-        AssertjsonInt(bootconfig, MAX_RESET_FACTORY, MaxRebootCountTriggerFactory, 0, 4095);
-        if (isConfigured == true)
-        {
-            return SaveToNVS();
-        }
-        return ret;
-    }
-    return ret;
-}
-
-esp_err_t BootConfig_t::GetConfiguration(json &config_out) const
-{
-    try
-    {
-        config_out[TAG]["params"] =
-            {
-                {"MaxRestFac", MaxRebootCountTriggerFactory}};
-        return ESP_OK;
-    }
-    catch (const std::exception &e)
-    {
-        ESP_LOGE(TAG, "%s", e.what());
-        return ESP_FAIL;
-    }
-}
-
-esp_err_t BootConfig_t::GetConfigurationStatus(json &config_out) const
-{
-    try
-    {
-        config_out[TAG]["status"] =
-            {
-                {IS_NEED_VALIDATION, IsNeedValidation()},
-                {PS_RAM_OK, psramFound()},
-                {IS_ROLLED_BACK, IsFactoryRolledBack() || IsOTARolledBack()},
-                {LAST_STATUS, lastStatus},
-                {OTA_STATUS, GetOtaStatusString(otaState)},
-                {REBOOT_COUNTER, rebootCounter},
-                {BOOT_REASON, static_cast<int>(bootReason)},
-                {"isConfigured", isConfigured}};
-        return ESP_OK;
-    }
-    catch (const std::exception &e)
-    {
-        ESP_LOGE(TAG, "%s", e.what());
-        return ESP_FAIL;
-    }
-}
-
-esp_err_t BootConfig_t::RestoreDefault()
-{
-    MaxRebootCountTriggerFactory = CONFIG_BOOT_DEFAULT_NUM_REBOOT_FACTORY_RESTORE;
-    rebootCounter = 0;
-    bootReason = NO_MEAN;
-    otaState = ESP_OTA_IMG_UNDEFINED;
-    lastStatus = NORMAL;
-    SaveToNVS();
-    return ESP_OK;
-}
-
-esp_err_t BootConfig_t::LoadFromNVS()
-{
-    NvsPointer storage = OPEN_NVS(TAG);
-    esp_err_t ret = ESP_OK;
-    ret |= storage->get(MAX_RESET_FACTORY, (MaxRebootCountTriggerFactory));
-    int _BootReason = 0;
-    ret |= storage->get(BOOT_REASON, (_BootReason));
-    bootReason = static_cast<RESET_REASON>(_BootReason);
-    ret |= storage->get(REBOOT_COUNTER, rebootCounter);
-    int _otaState = 0;
-    ret |= storage->get(OTA_STATUS, _otaState);
-    otaState = static_cast<esp_ota_img_states_t>(_otaState);
-    int _LastStatus;
-    ret |= storage->get(LAST_STATUS, _LastStatus);
-    lastStatus = static_cast<AladinStatus_t>(_LastStatus);
-    return ret;
-}
-
-esp_err_t BootConfig_t::SaveToNVS()
-{
-    NvsPointer storage = OPEN_NVS_W(TAG);
-    esp_err_t ret = ESP_OK;
-    ret |= storage->set(MAX_RESET_FACTORY, (MaxRebootCountTriggerFactory));
-    ret |= storage->set(BOOT_REASON, static_cast<int>(bootReason));
-    ret |= storage->set(REBOOT_COUNTER, rebootCounter);
-    ret |= storage->set(OTA_STATUS, static_cast<int>(otaState));
-    ret |= storage->set(LAST_STATUS, static_cast<int>(lastStatus));
-    return ret;
-}
-
-esp_err_t BootConfig_t::MqttCommandCallBack(const json &commandIn)
-{
-    esp_err_t ret = ESP_FAIL;
-    if (commandIn[TAG].contains("command") != 0)
-    {
-        auto rgbCommand = commandIn[TAG]["command"];
-        bool Found = false;
-        std::string password;
-        AssertjsonStr(rgbCommand, "ResetFactory", password);
-        if (password == "I am Very Sure")
-        {
-            return RestoreFactory();
-        }
-        AssertjsonBool(rgbCommand, "RollbackOTA", Found);
-        if (Found)
-        {
-            SetInvalidOtaImageAndReboot();
-            return ESP_OK;
-        }
-        AssertjsonBool(rgbCommand, "ConfirmOTA", Found);
-        if (Found)
-        {
-            return SetValidOtaImage();
-        }
-        AssertjsonBool(rgbCommand, "ResetRebootCounter", Found);
-        if (Found)
-        {
-            rebootCounter = 0;
-            NvsPointer storage = OPEN_NVS_W(TAG);
-            storage->set("rebootCounter", rebootCounter);
-            return ESP_OK;
-        }
-    }
-    return ret;
-}
 
 /**
  * @brief Get the Reset Reason String object

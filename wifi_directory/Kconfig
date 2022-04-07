@@ -1,4 +1,4 @@
-menu "Aladin Wifi Directory Configuration"
+menu "Wifi Directory Configuration"
 
     config WIFI_DIRECTORY_READ_BUFFER_SIZE
         int "size of bufffer for reading a line from file system"

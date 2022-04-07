@@ -1,5 +1,5 @@
-#ifndef __ALADIN_SYSTEM_H__
-#define __ALADIN_SYSTEM_H__
+#ifndef __SYSTEM_H__
+#define __SYSTEM_H__
 #pragma once
 
 #include "config.hpp"
@@ -36,7 +36,7 @@ struct CustomError_t
         errorStr += (esp_err_to_name(_err));
     }
 };
-typedef std::optional<CustomError_t> AladinErrorOptional_t;
-typedef CustomError_t AladinError_t;
+typedef std::optional<CustomError_t> ErrorOptional_t;
+typedef CustomError_t OptionalError_t;
 
-#endif // __ALADIN_SYSTEM_H__
+#endif // __SYSTEM_H__

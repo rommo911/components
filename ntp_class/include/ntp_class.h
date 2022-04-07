@@ -7,7 +7,7 @@
 #include <string>
 #include <time.h>
 
-class Ntp : public Config
+class Ntp 
 {
 
 private:
@@ -38,15 +38,6 @@ public:
     //get the first epoch timestamb that gives rami boot time;
     unsigned long GetStartupTimeStamb() const;
 
-    //CONFIG OVERRIDE
-    esp_err_t Diagnose();
-    esp_err_t SetConfigurationParameters(const json &config_in) override;
-    esp_err_t GetConfiguration(json &config_out) const override;
-    esp_err_t GetConfigurationStatus(json &config_out) const override;
-
-    esp_err_t RestoreDefault() override;
-    esp_err_t LoadFromNVS() override;
-    esp_err_t SaveToNVS() override;
 };
 
 extern std::shared_ptr<Ntp> ntp;

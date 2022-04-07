@@ -1,27 +1,18 @@
-#ifndef __ALADIN_BOOT_CFG_H__
-#define __ALADIN_BOOT_CFG_H__
+#ifndef __BOOT_CFG_H__
+#define __BOOT_CFG_H__
 #pragma once
 
 #include "config.hpp"
 #include "esp32/rom/rtc.h"
 #include "esp_attr.h"
 #include "esp_ota_ops.h"
-enum AladinStatus_t
-{
-    NORMAL = 0,
-    CONNECTION_FAILURE = 1,
-    DOL_FAILURE = 2,
-    HW_FAILURE = 3,
-    SW_FAILUR = 4
-};
-
-class BootConfig_t : private Config
+class BootConfig_t 
 {
 protected:
     static constexpr char TAG[] = "Boot";
 
 public:
-    BootConfig_t() : Config(TAG)
+    BootConfig_t()
     {
     }
     ~BootConfig_t(){};
@@ -44,25 +35,11 @@ public:
     // reset to Factory app partition and reboot
     esp_err_t RestoreFactory(); // no return
     // get system reset / startup Reason in string
-    static RTC_DATA_ATTR AladinStatus_t lastStatus;
-
     const auto &GetRebootCount()
     {
         return rebootCounter;
     }
-    const auto &GetAladinStatus()
-    {
-        return lastStatus;
-    }
-
 private:
-    esp_err_t SetConfigurationParameters(const json &config_in) override;
-    esp_err_t GetConfiguration(json &config_out) const override;
-    esp_err_t GetConfigurationStatus(json &config_out) const override;
-    esp_err_t RestoreDefault() override;
-    esp_err_t LoadFromNVS() override;
-    esp_err_t SaveToNVS() override;
-    esp_err_t MqttCommandCallBack(const json &commandIn) override;
 
     const std::string GetOtaStatusString(const esp_ota_img_states_t &reason) const;
     const std::string GetResetReasonString(const RESET_REASON &reason) const;
@@ -83,4 +60,4 @@ private:
 /////////
 typedef std::unique_ptr<BootConfig_t> BootConfig_p_t;
 extern BootConfig_p_t bootConfig;
-#endif // __ALADIN_BOOT_CFG_H__
+#endif // __BOOT_CFG_H__

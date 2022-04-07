@@ -1,5 +1,5 @@
 /**
- * @file aladin_debug.h
+ * @file h
  * @author your name (you@domain.com)
  * @brief
  * @version 0.1
@@ -9,8 +9,8 @@
  *
  */
 #pragma once
-#ifndef ALADIN_UTILITIES_H
-#define ALADIN_UTILITIES_H
+#ifndef _UTILITIES_H
+#define _UTILITIES_H
 
 #ifdef ESP_PLATFORM
 #include "esp_system.h"
@@ -263,4 +263,4 @@ void tools::hexDump(const std::vector<T> &pData)
     }
 }
 
-#endif // #if ALADIN_UTILITIES_H
+#endif // #if _UTILITIES_H

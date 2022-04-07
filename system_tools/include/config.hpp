@@ -1,5 +1,5 @@
-#ifndef __ALADIN_CONFIG_H__
-#define __ALADIN_CONFIG_H__
+#ifndef ___CONFIG_H__
+#define ___CONFIG_H__
 #pragma once
 
 #include "utilities.hpp"
@@ -15,7 +15,7 @@
 using json = nlohmann::json; // json
 typedef std::function<esp_err_t(const std::string& topic, const std::string& data, void* arg)> mqtt_data_callback_t;
 
-struct mqtt_data_callback_describtor_t // used to store prameters of callback// copy from "aladin_mqtt.h" // copied to prevent including mqtt here
+struct mqtt_data_callback_describtor_t // used to store prameters of callback// copy from // copied to prevent including mqtt here
 {
     mqtt_data_callback_t callback;
     void* argument;
@@ -258,4 +258,4 @@ static inline unsigned int ToMs(const std::chrono::duration<r, p>& in)
     return (unsigned int)std::chrono::duration_cast<std::chrono::milliseconds>(in).count();
 }
 
-#endif // __ALADIN_CONFIG_NVS_H__
+#endif // __CONFIG_NVS_H__
