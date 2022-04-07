@@ -1,0 +1,85 @@
+menu "my ota Configuration"
+
+    menu "https ota Configuration"
+        config OTA_TASK_PRIORITY
+                int "task priority"
+                default 2
+                range 1 20
+                help
+                    OTA service task priority.
+        config OTA_TASK_STACK_SIZE
+                int "task stack size"
+                default 8192
+                range 2048 8192
+                help
+                    OTA service task stack size.
+        config OTA_TASK_CORE
+                int "task core"
+                default 1
+                range 0 1
+                help
+                    OTA task core.
+        config OTA_HTTPS_DEFAULT_PORT
+            int "OTA HTTPS default port"
+            default 443
+            range 20 9999
+            help
+                logger task core.
+
+        config OTA_BUFFER_SIZE
+            int "buffer size"
+            default 4096
+            range 1024 8192
+            help
+                OTA_BUFFER_SIZE.
+        config OTA_DELAY_BEFORE_REBOOT_MS
+            int "delay before reboot (after flash new fw) ms"
+            default 3000
+            range 1 10000
+            help
+                OTA_DELAY_BEFORE_REBOOT_MS.            
+        config OTA_RECV_TIMEOUT_MS
+            int "http ota recieve timeout"
+            default 4000
+            range 1000 10000
+            help
+                OTA_RECV_TIMEOUT_MS.    
+        config OTA_DEFAULT_CHECK_DELAY_MINUTES
+            int "default check delay in minutes"
+            default 600
+            range 10 1200
+            help
+                OTA_DEFAULT_CHECK_DELAY_MINUTES.   
+    endmenu
+
+    menu "socket ota Configuration"
+
+    config OTA_SOCKET_TASK_PRIORITY
+            int "task priority"
+            default 2
+            range 1 20
+            help
+                OTA service task priority.
+    config OTA_SOCKET_TASK_STACK_SIZE
+            int "stack size"
+            default 8192
+            range 2048 8192
+            help
+                OTA_SOCKET service task stack size.
+    config OTA_SOCKET_TASK_CORE
+            int "task core"
+            default 1
+            range 0 1
+            help
+                logger task core.
+
+    config OTA_SOCKET_DEFAULT_PORT
+            int "default port"
+            default 443
+            range 20 9999
+            help
+                logger task core.
+
+
+    endmenu
+endmenu

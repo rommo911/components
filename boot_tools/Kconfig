@@ -1,0 +1,8 @@
+menu "my boot config"
+config BOOT_DEFAULT_NUM_REBOOT_FACTORY_RESTORE 
+        int "default number of reboots to initiate a factory reset"
+        default 4
+        range 2 10
+        help 
+            none             
+endmenu

@@ -1,0 +1,17 @@
+menu "Aladin Wifi Directory Configuration"
+
+    config WIFI_DIRECTORY_READ_BUFFER_SIZE
+        int "size of bufffer for reading a line from file system"
+        default 1024
+        range 512 2048
+        help
+            size of bufffer for reading a line from file system.
+
+    config WIFI_DIRECTORY_LIST_SIZE
+        int "size of wifi list saved in file system"
+        default 1024
+        range 512 2048
+        help
+            number of max ssid's can be saved
+
+endmenu

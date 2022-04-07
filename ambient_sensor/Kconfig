@@ -1,0 +1,30 @@
+menu "my Ambient sensor Configuration"
+
+config AMBIENT_SENSOR_DEFAULT_SMOOTHING_FACTOR
+        int "DEFAULT number of samples in one ADC cycle (oversampling)"
+        default 10
+        range 5 30
+        help
+            Define the oversampling number of samples.
+
+config AMBIENT_SENSOR_DEFAULT_DELAY
+        int "Default Delay for automatic ambient refresh"
+        default 500
+        range 100 5000
+        help
+            delay of the automatic ambient refresh (read adc).
+
+config AMBIENT_SENSOR_MIN_TASK_DELAY
+        int "Miminum Allowed Delay for automatic ambient refresh"
+        default 1
+        range 1 10
+        help
+            Miminum Allowed Delay for automatic ambient refresh.
+
+config AMBIENT_SENSOR_TASK_DELAY_MAX
+        int "Maximum Allowed Delay for automatic ambient refresh"
+        default 5
+        range 2 20
+        help
+            Maximum Allowed Delay for automatic ambient refresh.
+endmenu

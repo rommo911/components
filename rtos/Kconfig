@@ -1,0 +1,15 @@
+menu "my tasks "
+
+config TASK_DEFAULT_STACK
+        int "task default stack size"
+        default 2048
+        range 512 8192
+        help
+            STUFF.
+config TASK_DEFAULT_PRIORITY 
+        int "task default priority"
+        default 1 
+        range 0 20
+        help 
+            none             
+endmenu

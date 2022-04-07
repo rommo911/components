@@ -1,0 +1,10 @@
+menu "Aladin Debug Logging Setting"
+
+config AMBIENT_SENSOR_DEFAULT_DELAY
+        int "Default Delay for automatic ambient refresh"
+        default 500
+        range 100 5000
+        help
+            delay for automatic ambient refresh.
+
+endmenu

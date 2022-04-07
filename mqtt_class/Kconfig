@@ -1,0 +1,30 @@
+menu "my mqtt Configuration"
+
+config ESP_TLS_SKIP_SERVER_CERT_VERIFY
+        bool "ESP_TLS_SKIP_SERVER_CERT_VERIFY"
+        default y
+        help 
+            ESP_TLS_SKIP_SERVER_CERT_VERIFY
+config MQTT_DEFAULT_HOSTNAME
+        string "host name"
+        default "ESP-RAMI"
+        help 
+            MQTT_DEFAULT_HOSTNAME
+config MQTT_DEFAULT_LW_MSG
+        string "last will message string"
+        default "offline"
+        help 
+            MQTT_DEFAULT_LW_MSG
+config MQTT_DEFAULT_LW_MSG_QOS
+        int "last will message QoS"
+        default 1
+        range 0 3
+        help 
+            MQTT_DEFAULT_LW_MSG_QOS
+config MQTT_DEFAULT_BUFFER_SIZE
+        int "Buffer Size"
+        default 1024
+        range 512 4096
+        help 
+            MQTT_BUFFER_SIZE
+endmenu

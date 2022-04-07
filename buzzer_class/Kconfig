@@ -1,0 +1,91 @@
+menu "buzzer Configuration"
+
+config BUZZER_PWM_PIN
+        int "Buzzer gpio pin"
+        default 25
+        range 0 42
+        help
+            Buzzer gpio pin must support PWL via ledc_channel.
+
+config BUZZER_ENABLE_PIN
+        int "Buzzer gpio enable pin"
+        default 4
+        range 0 42
+        help
+            Buzzer gpio enable pin.
+
+config BUZZER_DEFAULT_FREQUENCY
+        int "Buzzer DEFAULT FREQUENCY"
+        default 2000
+        range 500 4500
+        help
+            Buzzer ledc_timer pwm frequency.
+			
+config BUZZER_ALARM_FREQUENCY
+        int "Buzzer Alarm Frequency"
+        default 1400
+        range 500 4500
+        help
+            Buzzer Alarm pwm frequency.
+
+config BUZZER_ACK_FREQUENCY
+        int "Buzzer Acknowledgment frequency"
+        default 1400
+        range 500 4500
+        help
+            Buzzer Acknowledgment pwm frequency.
+
+config BUZZER_ALARM_DUTY
+        int "Buzzer alarm intinsity"
+        default 2048
+        range 0 4095
+        help
+            Buzzer Alarm intensity :(duty cyle) 2048 = MAX.
+			
+config BUZZER_ALARM_TIMING_ON
+        int "Buzzer ON alarm cycle time"
+        default 350
+        range 50 1500
+        help
+            Buzzer ON alarm cycle time (mili seconds).
+
+config BUZZER_ALARM_TIMING_OFF
+        int "Buzzer OF alarm cycle time"
+        default 100
+        range 50 1500
+        help
+            Buzzer ON alarm cycle time (mili seconds).			
+
+config BUZZER_ACK_DUTY
+        int "Buzzer ACK intinsity"
+        default 2048
+        range 0 4095
+        help
+            Acknowledgment intensity :(duty cyle) 2048 = MAX.
+			
+config BUZZER_ACK_TIMING_ON
+        int "Buzzer ON Acknowledgment cycle time"
+        default 1500
+        range 100 2500
+        help
+            Buzzer ON Acknowledgment cycle time (mili seconds).
+
+config BUZZER_TASK_PRIORITY
+        int "task priority"
+        default 2
+        range 0 30
+        help
+            Buzzer task priority.			
+config BUZZER_TASK_STACK_SIZE
+        int "task stack size"
+        default 2048
+        range 1024 4096
+        help
+            Buzzer task priority.
+config BUZZER_TASK_CORE
+        int "task core"
+        default 0
+        range 0 1
+        help
+            Buzzer task priority.
+endmenu
