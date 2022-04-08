@@ -4,5 +4,4 @@ idf_component_register(SRCS "src/_ota.cpp"
                     PRIV_INCLUDE_DIRS "."
                     REQUIRES debug_tools
 					esp_https_ota app_update
-                    rtos
 					nvs_tools system_tools)

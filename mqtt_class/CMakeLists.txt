@@ -4,7 +4,6 @@ idf_component_register(SRCS "src/mqtt_class.cpp"
                     REQUIRES mqtt debug_tools
 					nvs_tools
                     system_tools
-					rtos
 					EMBED_TXTFILES mqtt_client.crt
 					mqtt_client.key
 					)

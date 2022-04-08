@@ -4,5 +4,4 @@ idf_component_register(SRCS "src/buzzer.cpp"
                     REQUIRES driver
                     debug_tools
                     system_tools
-                    rtos
                     )
