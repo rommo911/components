@@ -28,7 +28,7 @@ void PIR::setup(gpio_num_t _pin, gpio_mode_t _mode)
   gpio_isr_handler_add(pin, ISR_Handler, this);
   PIRLastStatus = false;
   PIRTimeout = 0;
-  this->HassMotionDescovery = std::make_unique <homeassistant::BinarySensorDiscovery>(hassDevice, homeassistant::BinarySensorDiscovery::motion);
+  //this->HassMotionDescovery = std::make_unique <homeassistant::BinarySensorDiscovery>(hassDevice, homeassistant::BinarySensorDiscovery::motion);
   this->HassPresenceDescovery = std::make_unique <homeassistant::BinarySensorDiscovery>(hassDevice, homeassistant::BinarySensorDiscovery::presence);
   StartTask(this);
 }

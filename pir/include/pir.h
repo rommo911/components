@@ -19,7 +19,7 @@ class PIR : public Task
     const char* TAG;
     EventLoop_p_t loop;
     homeassistant::BaseDevCtx& hassDevice;
-    std::unique_ptr<homeassistant::BinarySensorDiscovery> HassMotionDescovery{ nullptr };
+    //std::unique_ptr<homeassistant::BinarySensorDiscovery> HassMotionDescovery{ nullptr };
     std::unique_ptr<homeassistant::BinarySensorDiscovery> HassPresenceDescovery{ nullptr };
     public:
     ~PIR();
@@ -33,10 +33,6 @@ class PIR : public Task
     void SetTimeout(const std::chrono::seconds& s)
     {
         timeOut = s;
-    }
-    const auto& HassMotion() const
-    {
-        return HassMotionDescovery;
     }
     const auto& HassPresence() const
     {

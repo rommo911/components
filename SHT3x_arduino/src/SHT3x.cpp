@@ -27,12 +27,10 @@ bool	SHT3x::UpdateData(int SDA)
 	_Error = noError;
 	if ((_LastUpdateMillisec == 0) || ((millis() - _LastUpdateMillisec) >= _UpdateIntervalMillisec))
 	{
-		SoftReset();
-		delay(20);
 		bool res = SendCommand(_MeasMSB, _MeasLSB, SDA);
 		if (_Error == noError && res)
 		{
-			delay(20);
+			delay(25);
 			Wire.requestFrom(_Address, (uint8_t)6);
 			uint32_t WaitingBeginTime = millis();
 			while ((Wire.available() < 6) && ((millis() - WaitingBeginTime) < _TimeoutMillisec))
@@ -47,9 +45,7 @@ bool	SHT3x::UpdateData(int SDA)
 				for (uint8_t i = 0; i < 6; i++)
 				{
 					data[i] = Wire.read();
-					Serial.print(data[i], HEX);
 				}
-				Serial.println();
 				if ((CRC8(data[0], data[1], data[2])) && (CRC8(data[3], data[4], data[5])))
 				{
 					uint16_t TemperatureRaw = (data[0] << 8) + (data[1] << 0);
@@ -85,7 +81,8 @@ bool	SHT3x::UpdateData(int SDA)
 	}
 	else //LastUpdate was too recently
 	{
-		ESP_LOGE("SHT3x", "LastUpdate was too recently");
+		ESP_LOGW("SHT3x", "LastUpdate was too recently");
+		return true;
 		//Nothing to do, wait for next call
 	}
 	return false;
