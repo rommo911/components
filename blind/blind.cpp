@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include "nvs_tools.h"
 
-Blind::Blind(homeassistant::BaseDevCtx& hass_device, EventLoop_p_t& _loop,
+Blind::Blind( EventLoop_p_t& _loop,
     gpio_num_t _pin_up,
     gpio_num_t _pin_down
 ) : Config(TAG), loop(_loop),
@@ -22,7 +22,6 @@ pin_down(_pin_down)
     gpio_set_level(pin_down, 0);
     if (this->isInverted)
         std::swap(pin_up, pin_down);
-    HassBlindDescovery = std::make_unique <homeassistant::BlindDiscovery>(hass_device, homeassistant::BlindDiscovery::window);
 }
 
 Blind::~Blind()
@@ -319,4 +318,3 @@ esp_err_t Blind::LoadFromNVS()
     }
     return ret;
 }
-Blind* blind = nullptr;

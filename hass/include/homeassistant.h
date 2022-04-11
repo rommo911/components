@@ -23,7 +23,7 @@ namespace homeassistant {
 
     class Switch_Class_t
     {
-        public:
+    public:
         static constexpr char	None[] = "None";
         static constexpr char	outlet[] = "outlet";
         static constexpr char	Switch[] = "switch";
@@ -37,12 +37,12 @@ namespace homeassistant {
         std::string MAC;
         std::string model;
     } Device_Description_t;
-    
+
     class BaseDevCtx {
-        protected:
+    protected:
         Device_Description_t deviceDescription;
         nlohmann::json _json{  };
-        public:
+    public:
         BaseDevCtx() {}
         BaseDevCtx(Device_Description_t des);
         void SetDescription(Device_Description_t des);
@@ -54,27 +54,27 @@ namespace homeassistant {
     };
 
     class Discovery {
-        protected:
-        BaseDevCtx &_BaseDevCtx;
+    protected:
+        BaseDevCtx& _BaseDevCtx;
         std::string hass_mqtt_device;
         std::stringstream discovery_topic;
         std::string availability_topic = "";
-        std::string state_topic ="";
-        std::string command_topic ="" ;
+        std::string state_topic = "";
+        std::string command_topic = "";
         std::string discovery_message;
         std::stringstream topics_prefix;
         std::stringstream unique_id;
         nlohmann::json discoveryJson;
         virtual void ProcessFinalJson() = 0;
         bool procced = false;
-        protected:
+    protected:
         static constexpr char relay_t[] = "switch";
         static constexpr char cover_t[] = "cover";
         static constexpr char light_t[] = "light";
         static constexpr char binary_sensor_t[] = "binary_sensor";
         static constexpr char sensor_t[] = "sensor";
 
-        public:
+    public:
 
         Discovery(BaseDevCtx& ctx, const std::string& _hass_mqtt_device);
         virtual ~Discovery() {
@@ -86,17 +86,21 @@ namespace homeassistant {
         std::string CommandTopic();
         const std::string& DiscoveryMessage();
         const  std::string& ConnectionTopic();
+        std::pair<std::string, std::string> GenerateDiscoveryData()
+        {
+            return std::make_pair(this->DiscoveryTopic(), this->DiscoveryMessage());
+        }
 
         void DumpDebugAll();
     };
 
 
     class RelayDiscovery : public Discovery {
-        public:
+    public:
         RelayDiscovery(BaseDevCtx& ctx, const std::string& switch_name, const char* class_type) : Discovery(ctx, relay_t), _switch_name(switch_name), _class_type(class_type)
         {
         }
-        private:
+    private:
         void ProcessFinalJson();
 
         std::string _switch_name;
@@ -106,17 +110,17 @@ namespace homeassistant {
 
 
     class BlindDiscovery : public Discovery {
-        private:
+    private:
         std::string setPosTopic, positionTopic, _class_type;
         void ProcessFinalJson();
 
-        public:
-        BlindDiscovery(BaseDevCtx& ctx, const char* class_type) : Discovery(ctx, Discovery::cover_t),             _class_type(class_type)
+    public:
+        BlindDiscovery(BaseDevCtx& ctx, const char* class_type) : Discovery(ctx, Discovery::cover_t), _class_type(class_type)
         {
             ProcessJson();
         }
         std::string GetSetPosTopic() { return  std::string(topics_prefix.str() + setPosTopic.erase(0, 1)); }
-        std::string GetPosTopic() {  return  std::string(topics_prefix.str() + "/position"); }
+        std::string GetPosTopic() { return  std::string(topics_prefix.str() + "/position"); }
         static constexpr char	None[] = "None";
         static constexpr char	awning[] = "awning";
         static constexpr char	blind[] = "blind";
@@ -130,16 +134,16 @@ namespace homeassistant {
     };
 
     class SensorDiscovery : public Discovery {
-        private:
+    private:
         std::string name;
         std::string _sensorClass;
         std::string __unit;
         void ProcessFinalJson();
 
-        public:
+    public:
         SensorDiscovery(BaseDevCtx& ctx, const char* sensorClass, const std::string& unit = "") : Discovery(ctx, sensor_t), name(sensorClass), _sensorClass(sensorClass), __unit(unit)
         {
-                ProcessJson();
+            ProcessJson();
         }
         const std::string& GetClass() { return name; }
         static constexpr char	aqi[] = "aqi";
@@ -173,13 +177,13 @@ namespace homeassistant {
 
     };
     class BinarySensorDiscovery : public Discovery {
-        private:
+    private:
         std::string name;
         std::string _sensorClass;
         std::string __unit;
         void ProcessFinalJson();
 
-        public:
+    public:
         BinarySensorDiscovery(BaseDevCtx& ctx, const char* sensorClass, const char* unit = "") : Discovery(ctx, binary_sensor_t), name(sensorClass), _sensorClass(sensorClass), __unit(unit)
         {
 

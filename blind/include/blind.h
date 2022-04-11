@@ -24,7 +24,7 @@ class Blind :public Config
     static constexpr char TAG[] = "BLIND";
     int DownTime = DEFAULT_UP_DOWN_TIME_MS;
     int UpTime = DEFAULT_UP_DOWN_TIME_MS;
-    Blind(homeassistant::BaseDevCtx& hass_device, EventLoop_p_t& _loop, gpio_num_t pin_up, gpio_num_t pin_down);
+    Blind(EventLoop_p_t& _loop, gpio_num_t pin_up, gpio_num_t pin_down);
     ~Blind();
     bool handle_set_per(const std::string& str1);
     bool handle_set_per_uint(uint8_t percentage);
@@ -43,10 +43,6 @@ class Blind :public Config
     esp_err_t GetConfiguration(json& config_out) const override;
     esp_err_t SaveToNVS() override;
     bool IsIverted() { return isInverted; }
-    const auto& Hass() const
-    {
-        return HassBlindDescovery;
-    }
     private:
     //CONFIG OVERRIDE
     esp_err_t RestoreDefault() override;
@@ -59,10 +55,6 @@ class Blind :public Config
     bool isBusy = false;
     bool commandMode = false;
     bool isInverted = false;
-    std::unique_ptr<homeassistant::BlindDiscovery> HassBlindDescovery{ nullptr };
-
     void TimerExecute();
 };
-
-extern Blind* blind;
 #endif // __BLIND_H__

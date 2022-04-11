@@ -2,8 +2,8 @@
 #include "esp_log.h"
 #include "string.h"
 
-PIR::PIR(homeassistant::BaseDevCtx& hass_device, EventLoop_p_t& _loop, gpio_num_t pin, gpio_mode_t mode) : Task("PIR", 2048, 2, 1), TAG("PIR"),
-loop(_loop), hassDevice(hass_device)
+PIR::PIR(EventLoop_p_t& _loop, gpio_num_t pin, gpio_mode_t mode) : Task("PIR", 2048, 2, 1), TAG("PIR"),
+loop(_loop)
 {
   setup(pin, mode);
 }
@@ -28,8 +28,6 @@ void PIR::setup(gpio_num_t _pin, gpio_mode_t _mode)
   gpio_isr_handler_add(pin, ISR_Handler, this);
   PIRLastStatus = false;
   PIRTimeout = 0;
-  //this->HassMotionDescovery = std::make_unique <homeassistant::BinarySensorDiscovery>(hassDevice, homeassistant::BinarySensorDiscovery::motion);
-  this->HassPresenceDescovery = std::make_unique <homeassistant::BinarySensorDiscovery>(hassDevice, homeassistant::BinarySensorDiscovery::presence);
   StartTask(this);
 }
 void IRAM_ATTR PIR::ISR_Handler(void* arg)
@@ -107,8 +105,6 @@ void PIR::run(void* arg)
     }
   }
 }
-
-PIR* pir = nullptr;
 
 SWITCH::SWITCH(homeassistant::BaseDevCtx& hass_device,const char * type, EventLoop_p_t& _loop, gpio_num_t _pin, gpio_mode_t _mode) : Task("PIR"), loop(_loop), hassDevice(hass_device)
 {

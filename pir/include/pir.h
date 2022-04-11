@@ -18,12 +18,9 @@ class PIR : public Task
     static IRAM_ATTR void ISR_Handler(void* arg);
     const char* TAG;
     EventLoop_p_t loop;
-    homeassistant::BaseDevCtx& hassDevice;
-    //std::unique_ptr<homeassistant::BinarySensorDiscovery> HassMotionDescovery{ nullptr };
-    std::unique_ptr<homeassistant::BinarySensorDiscovery> HassPresenceDescovery{ nullptr };
     public:
     ~PIR();
-    PIR(homeassistant::BaseDevCtx& hass_device, EventLoop_p_t& _loop, gpio_num_t, gpio_mode_t);
+    PIR(EventLoop_p_t& _loop, gpio_num_t, gpio_mode_t);
     void run(TimerHandle_t arg);
     bool PIRLastStatus;
     void setup(gpio_num_t, gpio_mode_t mode);
@@ -34,10 +31,6 @@ class PIR : public Task
     {
         timeOut = s;
     }
-    const auto& HassPresence() const
-    {
-        return HassPresenceDescovery;
-    }
     const Event_t EVENT_PIR_OFF = { TAG, EventID_t(0) };
     const Event_t EVENT_PIR_ON = { TAG, EventID_t(1) };
     const Event_t EVENT_PIR_CHANGED = { TAG, EventID_t(2) };
@@ -46,8 +39,6 @@ class PIR : public Task
     const Event_t EVENT_PIR_PIN_OFF = { TAG, EventID_t(5) };
 
 };
-
-extern PIR* pir;
 
 class SWITCH : public Task
 {

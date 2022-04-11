@@ -15,10 +15,9 @@
   *
   * @param EventLoop
   */
-LightSensor::LightSensor(homeassistant::BaseDevCtx& _hass_device, EventLoop_p_t& EventLoop, adc1_channel_t _channel, const char* _TAG):
-Loop(EventLoop),
-channel(_channel),
-hass_device(_hass_device)
+LightSensor::LightSensor(EventLoop_p_t& EventLoop, adc1_channel_t _channel, const char* _TAG) :
+    Loop(EventLoop),
+    channel(_channel)
 {
     timer = std::make_unique<ESPTimer>([&](void* arg) {this->TimerRun(); }, TAG);
 
@@ -43,7 +42,6 @@ esp_err_t LightSensor::Init()
 
     if (lock == nullptr)
         lock = Semaphore::CreateUnique("LightSensor"); // create a semaphore
-    HassLuxSensorDescovery = std::make_unique <homeassistant::SensorDiscovery>(hass_device, homeassistant::SensorDiscovery::illuminance, "lux");
     esp_err_t ret = adc1_config_width(ADC_WIDTH_BIT_12);
     ret = adc1_config_channel_atten(channel, ADC_ATTEN_DB_11);
     if (ret != ESP_OK)
@@ -174,5 +172,4 @@ uint32_t LightSensor::GetValue() const
         return (0);
     }
 }
- 
-LightSensor_t lightSensor = nullptr;
+

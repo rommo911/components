@@ -38,8 +38,6 @@ private:
     std::list<unsigned int*> targetVariables; // list of pointers to variable to be updated with last value - use
     static constexpr char TAG[] = "light_sensor";
     adc1_channel_t channel;
-    homeassistant::BaseDevCtx& hass_device;
-    std::unique_ptr<homeassistant::SensorDiscovery> HassLuxSensorDescovery{ nullptr };
     ESPTimer_p_t timer{ nullptr };
 
     //EVENTS
@@ -51,12 +49,8 @@ public:
     const Event_t EVENT_CHANGED_20_PERC = { TAG, EventID_t(2) };
     const Event_t EVENT_MEASURE = { TAG, EventID_t(3) };
     //
-    LightSensor(homeassistant::BaseDevCtx& hass_device, EventLoop_p_t& EventLoop, adc1_channel_t _channel, const char* _TAG);
+    LightSensor(EventLoop_p_t& EventLoop, adc1_channel_t _channel, const char* _TAG);
     ~LightSensor();
-    const auto& Hass() const
-    {
-        return HassLuxSensorDescovery;
-    }
     //register a pointer to be updated automatically with the ambient light value
     //uint32_t *var ( up to 5 pointers are allowed)
     esp_err_t RegisterVariable(uint32_t* var);
@@ -81,6 +75,4 @@ private:
     //CONFIG OVERRIDE
     esp_err_t TimerRun(); // actual measure on timer trigger // stativ and need to get "this" pointer
 };
-typedef std::unique_ptr<LightSensor> LightSensor_t;
-extern LightSensor_t lightSensor;
 #endif

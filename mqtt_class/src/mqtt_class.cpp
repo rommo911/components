@@ -216,6 +216,18 @@ esp_err_t Mqtt::Publish(const std::string& topic, const std::string& data, uint8
 	};
 	return Publish(msg);
 }
+esp_err_t Mqtt::Publish(std::pair<std::string, std::string> data, uint8_t qos, bool retained) const
+{
+	MqttMsg_t msg = {
+		.retained = retained,
+		.qos = qos,
+		.payload = data.second.c_str(),
+		.topic = data.first.c_str(),
+		.length = data.second.length(),
+		.topicLen = data.first.length(),
+	};
+	return Publish(msg);
+}
 
 esp_err_t Mqtt::Publish(const char* topic, const std::string& data, uint8_t qos, bool retained) const
 {
