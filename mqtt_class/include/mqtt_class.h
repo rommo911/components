@@ -28,7 +28,7 @@ extern std::shared_ptr<Mqtt> MqttDOL;
 
 class Mqtt : public Config
 {
-private:
+	private:
 	EventLoop_p_t Loop;
 	struct MqttUserConfig_t
 	{
@@ -48,7 +48,7 @@ private:
 	std::vector<mqtt_data_callback_describtor_t> mqttRegisteredCommands;
 	SemaphorePointer_t lock;
 
-public:
+	public:
 	static constexpr char TAG[] = "Mqtt-DOL";
 	struct MqttMsg_t
 	{
@@ -80,6 +80,8 @@ public:
 	esp_err_t UnSubscribe(const char* topic) const;
 	esp_err_t Subscribe(const char* topic, int qos) const;
 	esp_err_t Subscribe(const std::string& topic, int qos = 1) const;
+	void AddToSubscribeList(std::string&& topic);
+	void AddToSubscribeList(const std::string& topic);
 	esp_err_t Publish(const MqttMsg_t& msg) const;
 	esp_err_t Publish(const std::string&, const std::string&, uint8_t qos = 1, bool retained = false) const;
 	esp_err_t Publish(const char*, const char*, uint8_t qos = 1, bool retained = false) const;
@@ -93,7 +95,7 @@ public:
 	void ResetDisconnectionCounter();
 	esp_err_t GetConfiguration(json& config_out) const override;
 
-private:
+	private:
 	//CONFIG OVERRIDE
 	esp_err_t GetConfigurationStatus(json& config_out) const override;
 	esp_err_t RestoreDefault() override;

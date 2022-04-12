@@ -190,6 +190,17 @@ esp_err_t Mqtt::Publish(const MqttMsg_t& msg) const
 	}
 	return (ESP_OK);
 }
+void Mqtt::AddToSubscribeList(const std::string& topic)
+{
+	privateTopicList.push_back(topic);
+
+}
+
+void Mqtt::AddToSubscribeList(std::string&& topic)
+{
+	privateTopicList.push_back(std::move(topic));
+
+}
 
 esp_err_t Mqtt::Publish(const char* topic, const char* data, uint8_t qos, bool retained) const
 {
