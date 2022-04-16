@@ -7,3 +7,6 @@
 [submodule "esp32-camera"]
 	path = esp32-camera
 	url = https://github.com/espressif/esp32-camera.git
+[submodule "esp-who"]
+	path = esp-who
+	url = https://github.com/espressif/esp-who.git
