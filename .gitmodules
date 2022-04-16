@@ -10,3 +10,6 @@
 [submodule "esp-who"]
 	path = esp-who
 	url = https://github.com/espressif/esp-who.git
+[submodule "esp-dl"]
+	path = esp-dl
+	url = https://github.com/espressif/esp-dl.git
