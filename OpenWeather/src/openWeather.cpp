@@ -4,6 +4,30 @@
 #include "openWeather.hpp"
 #include "esp_log.h"
 #include <sstream>
+#include "webclient.hpp"
+
+void test()
+{
+    WebClient client;
+    esp_http_client_config_t config = {};
+    config.url = "http://api.openweathermap.org/data/2.5/weather?q=";
+    config.port = 80;
+    EventGroupHandle_t group = xEventGroupCreate();
+    WebClient::DynamicBuffer_t buffer = {
+        .pointer = new char[1024],
+        .size = 1024,
+        .HTTPEventGroup = group
+    };
+    config.user_data = &buffer;
+    client.StartGET(config);
+    if (xEventGroupWaitBits(group, WebClient::WEB_CLIENT_DATA_BIT, false, true, pdMS_TO_TICKS(5000)) == pdTRUE)
+    {
+        std::string data(buffer.pointer);
+        ESP_LOGI("WEB_CLIENT", "data: %s", data.c_str());
+    }
+
+}
+
 #define NVS_OW_NAME_SAPCE "OPEN_WEATHER"// or °F
 #define NVS_KEY_OW_UNIT "°C"// or °F
 #define NVS_KEY_OW_API_KEY  "OW_API_KEY"
@@ -115,7 +139,7 @@ bool OpenWeather::getWeather()
     }
     if (updated && ((GET_NOW_MINUTES - this->lastUpdated) < 10))
     {
-       // ESP_LOGI(NVS_OW_NAME_SAPCE, "Weather already updated");
+        // ESP_LOGI(NVS_OW_NAME_SAPCE, "Weather already updated");
         return true;
     }
     //ESP_LOGW("WEATHER", "%s", serverPath.c_str());
