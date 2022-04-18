@@ -2,10 +2,8 @@
 #define WIFI_DIRECTORY__H
 #pragma once
 
-#include "spiffs_tools.h"
 #include "esp_err.h"
 #include <list>
-#include <queue>
 #include <string.h>
 #include <string>
 #include <memory>
@@ -44,7 +42,7 @@ public:
     //////////////webserver wrapping function //////
     esp_err_t ExternalSsidModify(HotspotEntry entry, const char *modificationType);
     char *StructToJson(const HotspotEntry &entry);
-    HotspotEntry JsonToStruc(char *entryJson);
+    HotspotEntry JsonToStruc(const char *entryJson);
     const auto& GetList()
     {
         return wifiList;
