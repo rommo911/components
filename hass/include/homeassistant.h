@@ -186,7 +186,7 @@ namespace homeassistant {
     public:
         BinarySensorDiscovery(BaseDevCtx& ctx, const char* sensorClass, const char* unit = "") : Discovery(ctx, binary_sensor_t), name(sensorClass), _sensorClass(sensorClass), __unit(unit)
         {
-
+            ProcessJson();
         }
         const std::string& GetClass() { return name; }
         static constexpr char	None[] = "None";
