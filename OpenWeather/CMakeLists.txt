@@ -1,4 +1,4 @@
 idf_component_register(SRCS "src/openWeather.cpp"
                     INCLUDE_DIRS "include"	
-                     REQUIRES Arduino_lib nlohmann_json nvs_tools
+                     PRIV_REQUIRES webclient nlohmann_json Arduino_lib nvs_tools
                     )
