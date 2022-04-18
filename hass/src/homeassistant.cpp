@@ -227,7 +227,7 @@ namespace homeassistant {
         val += _sensorClass;
         val += "}}";
         this->discoveryJson["value_template"] = val.c_str();
-        if ((__unit.length()) > 0)
+        if ((__unit) != "N/A")
         {
             this->discoveryJson["unit_of_meas"] = __unit.c_str();
         }
@@ -256,10 +256,10 @@ namespace homeassistant {
         val += _sensorClass;
         val += "}}";
         this->discoveryJson["value_template"] = val.c_str();
-        if ((__unit.length()) > 0)
+       /* if ((__unit.length()) > 0)
         {
             this->discoveryJson["unit_of_meas"] = __unit.c_str();
-        }
+        }*/
         this->discoveryJson["payload_on"] = true;
         this->discoveryJson["payload_off"] = false;
         this->discoveryJson["device_class"] = _sensorClass.c_str();

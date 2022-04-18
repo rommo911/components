@@ -141,7 +141,7 @@ namespace homeassistant {
         void ProcessFinalJson();
 
     public:
-        SensorDiscovery(BaseDevCtx& ctx, const char* sensorClass, const std::string& unit = "") : Discovery(ctx, sensor_t), name(sensorClass), _sensorClass(sensorClass), __unit(unit)
+        SensorDiscovery(BaseDevCtx& ctx, const char* sensorClass, const std::string& unit) : Discovery(ctx, sensor_t), name(sensorClass), _sensorClass(sensorClass), __unit(unit)
         {
             ProcessJson();
         }
@@ -180,11 +180,10 @@ namespace homeassistant {
     private:
         std::string name;
         std::string _sensorClass;
-        std::string __unit;
         void ProcessFinalJson();
 
     public:
-        BinarySensorDiscovery(BaseDevCtx& ctx, const char* sensorClass, const char* unit = "") : Discovery(ctx, binary_sensor_t), name(sensorClass), _sensorClass(sensorClass), __unit(unit)
+        BinarySensorDiscovery(BaseDevCtx& ctx, const char* sensorClass) : Discovery(ctx, binary_sensor_t), name(sensorClass), _sensorClass(sensorClass)
         {
             ProcessJson();
         }
