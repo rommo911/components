@@ -1,7 +1,7 @@
 #ifndef __ROTARY_H__
 #define __ROTARY_H__
 
-#include <encoder.h>
+#include "encoder.h"
 #include <string.h>
 #include "task_tools.h"
 #include "freertos/FreeRTOS.h"
@@ -9,7 +9,6 @@
 #include "system.hpp"
 
 using namespace idf::event;
-using namespace std;
 #define RE_A_GPIO 16
 #define RE_B_GPIO 17
 #define RE_BTN_GPIO 5

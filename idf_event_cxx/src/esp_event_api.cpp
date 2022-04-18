@@ -1,6 +1,5 @@
 #include "sdkconfig.h"
 #ifdef ESP_PLATFORM
-#include "utilities.hpp"
 #include "esp_event.h"
 #include "esp_event_api.hpp"
 #include "esp_event_cxx.hpp"

@@ -583,7 +583,7 @@ std::string tools::getSketchMD5()
 	{
 		return result;
 	}
-	uint32_t lengthLeft = getSketchSize();
+	//uint32_t lengthLeft = getSketchSize();
 
 	const esp_partition_t* running = esp_ota_get_running_partition();
 	if (!running)
@@ -592,7 +592,7 @@ std::string tools::getSketchMD5()
 	}
 	const size_t bufSize = SPI_FLASH_SEC_SIZE;
 	std::unique_ptr<uint8_t[]> buf(new uint8_t[bufSize]);
-	uint32_t offset = 0;
+	//uint32_t offset = 0;
 	if (!buf.get())
 	{
 		return std::string();
@@ -608,7 +608,7 @@ std::string tools::getOTASketchMD5()
 	{
 		return result;
 	}
-	uint32_t lengthLeft = getSketchSize();
+	//uint32_t lengthLeft = getSketchSize();
 
 	const esp_partition_t* running = esp_ota_get_next_update_partition(NULL);
 	if (!running)
@@ -617,7 +617,7 @@ std::string tools::getOTASketchMD5()
 	}
 	const size_t bufSize = SPI_FLASH_SEC_SIZE;
 	std::unique_ptr<uint8_t[]> buf(new uint8_t[bufSize]);
-	uint32_t offset = 0;
+	///uint32_t offset = 0;
 	if (!buf.get())
 	{
 		return std::string();

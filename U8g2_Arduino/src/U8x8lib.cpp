@@ -38,26 +38,15 @@
 
 
 #include "U8x8lib.h"
-#define ARDUINO
-#ifdef ARDUINO
 
 #define U8X8_USE_PINS
 
 #ifdef U8X8_HAVE_HW_SPI
 #include <SPI.h>
 #endif 
-
-#ifdef U8X8_HAVE_HW_I2C
-#  ifdef U8X8_HAVE_HW_I2C_TEENSY3
-#    include <i2c_t3.h>
-#  else
-#    include <Wire.h>
-#  endif
-#endif /* U8X8_HAVE_HW_I2C */
-
+# include <Wire.h>
 #include "esp32-hal-gpio.h"
 #include "string.h"
-#endif /* ARDUINO */ 
 
 
 

@@ -1,6 +1,5 @@
 #include "boot_cfg.h"
 #include "debug_tools.h"
-#include "esp32-hal-psram.h"
 #include "esp_log.h"
 #include "esp_partition.h"
 #include "esp_system.h"

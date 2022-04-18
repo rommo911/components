@@ -70,7 +70,6 @@ WifiDirectory::~WifiDirectory()
 WifiDirectory::WifiDirectory()
 {
     isInitialized = false;
-    savedssidNumber = 0;
 }
 
 /**
@@ -90,8 +89,7 @@ esp_err_t WifiDirectory::Init()
     File wifiFile = LittleFS.open("config1.txt", "r");
     if (!wifiFile) // no saved file // create new one
     {
-        LOGE(TAG, "No file found..");
-        LOGW(TAG, "Creating new file w/config1.txt ..  ");
+        LOGW(TAG, "No file found.. Creating new file w/config1.txt ..  ");
         wifiFile = LittleFS.open("config1.txt", "w+b");
         if (!wifiFile)
         {
@@ -104,8 +102,6 @@ esp_err_t WifiDirectory::Init()
         wifiList.push_back(hotspot);
         wifiFile.println((const char*)StructToJson(hotspot));
         wifiFile.close();
-        wifiCurrentEntryIterator = wifiList.begin();
-        savedssidNumber = wifiList.size();
         if (ret == ESP_OK)
         {
             isInitialized = true;
@@ -125,8 +121,6 @@ esp_err_t WifiDirectory::Init()
         if ((entry.ssid.length()) && (entry.password.length() > 7))
             wifiList.push_back(entry);
     }
-    wifiCurrentEntryIterator = wifiList.begin();
-    savedssidNumber = wifiList.size();
     if (ret != ESP_OK)
     {
         isInitialized = false;
@@ -148,21 +142,31 @@ esp_err_t WifiDirectory::Init()
  *      ESP_ERR_INVALID_ARG : character/password assertion failed
  *      ESP_ERR_INVALID_STATE : unauthorized opeartion
  */
-esp_err_t WifiDirectory::CreatePermanentEntry(const HotspotEntry& tempHotspot)
+esp_err_t WifiDirectory::CreateEntry(const HotspotEntry& tempHotspot)
 {
-    ASSERT_CHARACHTERS_AND_RETURN_ERR(tempHotspot.ssid.c_str())
+    ASSERT_INIT_AND_RETURN_ERR(WifiDirectory::isInitialized, TAG)
+        ASSERT_CHARACHTERS_AND_RETURN_ERR(tempHotspot.ssid.c_str())
         ASSERT_CHARACHTERS_AND_RETURN_ERR(tempHotspot.password.c_str())
         if ((tempHotspot.password.length()) < 8) //assert password
         {
             LOGE(TAG, "the entered password %s is not valid for add/update", tempHotspot.password.c_str());
             return ESP_ERR_INVALID_ARG;
         }
-    for (auto it : wifiList) //check fo duplicate
+    for (auto& entry : wifiList) //check fo duplicate
     {
-        if ((it.ssid == tempHotspot.ssid)) //duplicate found : update its password
+        if ((entry.ssid == tempHotspot.ssid)) //duplicate found : update its password
         {
-            LOGW(TAG, "ssid %s Already exist ... ", tempHotspot.ssid.c_str());
-            return ESP_ERR_INVALID_STATE;
+            if (entry.password != tempHotspot.password)
+            {
+                entry.password = tempHotspot.password;
+                LOG_WIFI_DIRECTORY(TAG, "duplicate found : updating password for %s", entry.ssid.c_str());
+                goto end;
+            }
+            else
+            {
+                LOGW(TAG, "ssid %s Already exist ... ", tempHotspot.ssid.c_str());
+                return ESP_ERR_INVALID_STATE;
+            }
         }
 
     } // no duplicate
@@ -173,59 +177,16 @@ esp_err_t WifiDirectory::CreatePermanentEntry(const HotspotEntry& tempHotspot)
         LOGW(TAG, " Wifi wifiDirectory list exceeded %d .. deleting ssid: %s", LIST_SIZE, wifiList.back().ssid.c_str());
         wifiList.erase(--wifiList.end());
     }
-    ASSERT_INIT_AND_RETURN_ERR(WifiDirectory::isInitialized, TAG)
-        LOG_WIFI_DIRECTORY(TAG, " Entry with ssid : %s is added", tempHotspot.ssid.c_str());
+    LOG_WIFI_DIRECTORY(TAG, " Entry with ssid : %s is added", tempHotspot.ssid.c_str());
 #if DEBUG_WIFI_DIRECTORY == VERBOS
     PrintSavedSSID();
 #endif
-    savedssidNumber = wifiList.size();
+end:
     isModified = true;
     Save();
     return ESP_OK;
 }
 
-/**
- * @brief wrap up the CreateEntry to force a non-permanent entry add/update
- *
- * @param tempHotspot entry to be added
- * @return esp_err_t
- *      ESP_ERR_INVALID_ARG : character/password assertion failed
- *      ESP_ERR_INVALID_STATE : unauthorized opeartion
- */
-esp_err_t WifiDirectory::CreateEntry(const HotspotEntry& tempHotspot)
-{
-    auto tmp = tempHotspot;
-    return CreatePermanentEntry(tmp);
-}
-
-/**
- * @brief ModifyEntry can modify password / permanent / priority
- *        will search for existing ssid
- * @param tempHotspot
- * @return esp_err_t
- */
-esp_err_t WifiDirectory::ModifyEntry(const HotspotEntry& tempHotspot)
-{
-    ASSERT_INIT_AND_RETURN_ERR(WifiDirectory::isInitialized, TAG)
-        ASSERT_CHARACHTERS_AND_RETURN_ERR(tempHotspot.ssid.c_str())
-        for (auto it : wifiList) //check fo duplicate
-        {
-            if ((it.ssid == tempHotspot.ssid) == 0) //duplicate found : update its password
-            {
-                if ((tempHotspot.password.length()) >= 8)
-                {
-                    it.password = tempHotspot.password;
-                    LOG_WIFI_DIRECTORY(TAG, " Entry with ssid : %s updated the password..", tempHotspot.ssid.c_str());
-                }
-                LOG_WIFI_DIRECTORY(TAG, " Entry with ssid %s updated", tempHotspot.ssid.c_str());
-                isModified = true;
-                return ESP_OK;
-            }
-
-        } // not found
-    LOGE(TAG, "ssid %s not found for modify ", tempHotspot.ssid.c_str());
-    return ESP_ERR_NOT_FOUND;
-}
 
 /**
  * @brief push the list to the config.txt file
@@ -262,7 +223,6 @@ esp_err_t WifiDirectory::Save()
     {
         LOGE(TAG, "Error: Changes may not be saved..");
     }
-    savedssidNumber = wifiList.size();
     isModified = false;
     LOG_WIFI_DIRECTORY_V(TAG, "FIle closed and saved , all good");
     LittleFS.end();
@@ -278,15 +238,20 @@ esp_err_t WifiDirectory::Save()
  */
 esp_err_t WifiDirectory::DeleteEntry(const char* ssid)
 {
-    ASSERT_INIT_AND_RETURN_ERR(WifiDirectory::isInitialized, TAG)
-        ASSERT_CHARACHTERS_AND_RETURN_ERR(ssid)
-        wifiList.remove_if([&](WifiDirectory::HotspotEntry entry)
-            { return ((entry.ssid == ssid)); });
-    if (wifiList.size() < savedssidNumber)
+    ASSERT_INIT_AND_RETURN_ERR(WifiDirectory::isInitialized, TAG);
+    wifiList.remove_if([&](WifiDirectory::HotspotEntry entry)
+        {
+            if (entry.ssid == ssid)
+            {
+                isModified = true;
+                LOG_WIFI_DIRECTORY(TAG, "ssid %s is removed ", ssid);
+                return true;
+            }
+            return false;
+        }
+    );
+    if (isModified == true)
     {
-        LOG_WIFI_DIRECTORY(TAG, "ssid %s is removed ", ssid);
-        isModified = true;
-        savedssidNumber = wifiList.size();
         Save();
         return ESP_OK;
     }
@@ -305,27 +270,6 @@ esp_err_t WifiDirectory::ResetDirectory()
 
 
 /**
- * @brief return next entry in the list
- *
- * @return WifiDirectory::HotspotEntry
- */
-const WifiDirectory::HotspotEntry& WifiDirectory::GetNextEntry()
-{
-    if (!isInitialized)
-    {
-        LOGE(TAG, " NOT initialized ! returning ");
-        static WifiDirectory::HotspotEntry hotspot = { "N/A", "N/A", "" };
-        return hotspot;
-    }
-    if (wifiCurrentEntryIterator == wifiList.end())
-    {
-        //LOG_WIFI_DIRECTORY_V(TAG, " End of wifi list ... returning to first entry");
-        wifiCurrentEntryIterator = wifiList.begin();
-    }
-    return *(wifiCurrentEntryIterator++);
-}
-
-/**
  * @brief print the list of all entries
  *
  */
@@ -333,9 +277,9 @@ void WifiDirectory::PrintSavedSSID()
 {
     ASSERT_INIT_NO_RETURN(WifiDirectory::isInitialized, TAG)
         printf(" list size is : %d \n\r", wifiList.size());
-    for (auto it = wifiList.begin(); it != wifiList.end(); it++)
+    for (const auto& entry : wifiList)
     {
-        PrintEntry(*it);
+        PrintEntry(entry);
     }
 }
 
@@ -352,15 +296,6 @@ void WifiDirectory::PrintEntry(const HotspotEntry& entry)
                 entry.ssid.c_str(), entry.password.c_str(), entry.bssid.c_str());
 }
 
-/**
- * @brief
- *
- */
-void WifiDirectory::ResetIndex()
-{
-    ASSERT_INIT_NO_RETURN(WifiDirectory::isInitialized, TAG)
-        wifiCurrentEntryIterator = wifiList.begin();
-}
 
 /**
  * @brief
@@ -369,7 +304,7 @@ void WifiDirectory::ResetIndex()
 uint8_t WifiDirectory::GetListNumber()
 {
     ASSERT_INIT_RETURN_ZERO(WifiDirectory::isInitialized, TAG)
-        return savedssidNumber;
+        return wifiList.size();
 }
 
 /////////////////////////////////Webserver specifi functions ////

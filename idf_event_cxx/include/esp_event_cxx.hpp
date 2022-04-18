@@ -41,7 +41,7 @@ typedef const char* esp_event_base_t; /**< unique pointer to a subsystem that ex
 
 #include "esp_event_api.hpp"
 #include "esp_exception.hpp"
-
+#include "esp_timer.h"
 namespace idf
 {
        namespace event
