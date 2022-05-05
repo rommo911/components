@@ -33,7 +33,7 @@ class OpenWeather
     std::string  unit = "metric";
     std::string  apiKey = "97cec37fde60c24ccb3b9be70eeab757";
     bool IsInitialized = false;
-    static std::string httpGETRequest(const char* serverName);
+    static String httpGETRequest(const char* serverName);
     struct {
         std::string description;
         std::string icon;

@@ -7,7 +7,6 @@
 #include <string.h>
 #include <string>
 #include <memory>
-using namespace std;
 class WifiDirectory
 {
     friend class Wifi;
@@ -46,7 +45,7 @@ private:
     bool isModified = false;
     static constexpr char check[] = "ABCDEFGHIGKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+0123465798'()@[]=<>!:+-/* $~&_";
     static const int LIST_SIZE = CONFIG_WIFI_DIRECTORY_LIST_SIZE;
-    list<WifiDirectory::HotspotEntry> wifiList;
+    std::list<WifiDirectory::HotspotEntry> wifiList;
 };
 extern std::unique_ptr<WifiDirectory> wifiDirectory;
 #endif

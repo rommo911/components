@@ -4,7 +4,6 @@
 #include "driver/gpio.h"
 #include "freertos/event_groups.h"
 #include "system.hpp"
-#include "homeassistant.h"
 
 class PIR : public Task
 {
@@ -48,21 +47,15 @@ class SWITCH : public Task
     gpio_num_t pin;
     const EventBits_t ISR_EVENT = BIT(0);
     const EventBits_t Changed_EVENT = BIT(2);
-    EventLoop_p_t& loop;
-    homeassistant::BaseDevCtx& hassDevice;
+    EventLoop_p_t loop;
     static IRAM_ATTR void ISR_Handler(void* arg);
-
     void run(void* arg);
-
     public:
     ~SWITCH();
-    SWITCH(homeassistant::BaseDevCtx& hass_device, const char* type, EventLoop_p_t& _loop, gpio_num_t, gpio_mode_t);
-    void Setup(gpio_num_t, gpio_mode_t, const char* type);
+    SWITCH(EventLoop_p_t&, gpio_num_t, gpio_mode_t);
+    void Setup(gpio_num_t, gpio_mode_t);
     bool Status();
-    std::unique_ptr<homeassistant::BinarySensorDiscovery> HassSwitchDescovery{ nullptr };
-
 };
-extern SWITCH* Switch;
 
 static constexpr esp_event_base_t SW_EVENT = ("SWITCH");
 static const Event_t EVENT_SW_OFF(SW_EVENT, EventID_t(0));

@@ -17,7 +17,6 @@
 #ifdef __cpp_exceptions
 
 using namespace idf::event;
-using namespace std;
 
 namespace idf
 {
@@ -99,7 +98,7 @@ namespace idf
 
         ESPEventRegTimed::~ESPEventRegTimed()
         {
-            std::lock_guard<mutex> guard(timeout_mutex);
+            std::lock_guard<std::mutex> guard(timeout_mutex);
             esp_timer_stop(timer);
             esp_timer_delete(timer);
             // TODO: is it guaranteed that there is no pending timer callback for timer?
@@ -142,15 +141,15 @@ namespace idf
 
         ESPEventLoop::~ESPEventLoop() {}
 
-        unique_ptr<ESPEventReg> ESPEventLoop::register_event(const ESPEvent &event,
-                                                             function<void(const ESPEvent &, void *)> cb)
+        std::unique_ptr<ESPEventReg> ESPEventLoop::register_event(const ESPEvent &event,
+                                                             std::function<void(const ESPEvent &, void *)> cb)
         {
             std::lock_guard<std::mutex> autolock(lock);
-            return unique_ptr<ESPEventReg>(new ESPEventReg(cb, event, api));
+            return std::unique_ptr<ESPEventReg>(new ESPEventReg(cb, event, api));
         }
 
         void ESPEventLoop::post_event(const ESPEvent &event,
-                                      const chrono::milliseconds &wait_time)
+                                      const std::chrono::milliseconds &wait_time)
         {
             std::lock_guard<std::mutex> autolock(lock);
             esp_err_t result = api->post(event.base,

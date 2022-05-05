@@ -143,7 +143,7 @@ bool OpenWeather::getWeather()
         return true;
     }
     //ESP_LOGW("WEATHER", "%s", serverPath.c_str());
-    result = httpGETRequest(serverPath.c_str());
+    result = httpGETRequest(serverPath.c_str()).c_str();
     if (result.length() > 150)
     {
         this->jsonData.clear();
@@ -175,18 +175,18 @@ bool OpenWeather::getWeather()
     return false;
 
 }
-std::string OpenWeather::httpGETRequest(const char* serverName) {
+String OpenWeather::httpGETRequest(const char* serverName) {
     HTTPClient http;
 
     // Your IP address with path or Domain name with URL path 
     http.begin(serverName);
     // Send HTTP POST request
     int httpResponseCode = http.GET();
-    std::string payload = "";
+    String payload = "";
     if (httpResponseCode > 0) {
         // Serial.print("HTTP Response code: ");
         // Serial.println(httpResponseCode);
-        payload = http.getString_std();
+        payload = http.getString();
     }
     else {
         Serial.print("Error code: ");

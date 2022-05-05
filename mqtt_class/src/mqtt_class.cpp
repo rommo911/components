@@ -30,7 +30,6 @@
 #include <memory>
 #include <string>
 using NvsPointer = std::unique_ptr<NVS>;
-using namespace std;
 const esp_mqtt_client_config_t Mqtt::mqttDefaultCfg;
 extern const char mqtt_client_crt_start[] asm("_binary_mqtt_client_crt_start");
 extern const char mqtt_client_crt_end[] asm("_binary_mqtt_client_crt_end");

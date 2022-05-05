@@ -1,3 +1,6 @@
 [submodule "esp-who"]
 	path = esp-who
 	url = https://github.com/rommo911/esp-who.git
+[submodule "arduino-esp32"]
+	path = arduino-esp32
+	url = https://github.com/rommo911/arduino-esp32.git

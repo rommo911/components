@@ -9,7 +9,6 @@
 #include "esp_timer_cxx.hpp"
 #include <nlohmann/json.hpp>
 #include <optional>
-using namespace std;
 using json = nlohmann::json;
 using namespace std::chrono;
 using namespace std::chrono_literals;

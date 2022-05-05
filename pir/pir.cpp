@@ -106,12 +106,12 @@ void PIR::run(void* arg)
   }
 }
 
-SWITCH::SWITCH(homeassistant::BaseDevCtx& hass_device,const char * type, EventLoop_p_t& _loop, gpio_num_t _pin, gpio_mode_t _mode) : Task("PIR"), loop(_loop), hassDevice(hass_device)
+SWITCH::SWITCH(EventLoop_p_t& _loop, gpio_num_t _pin, gpio_mode_t _mode) : Task("switvch"), loop(_loop)
 {
-  Setup(_pin, _mode,type);
+  Setup(_pin, _mode);
 }
 
-void SWITCH::Setup(gpio_num_t _pin, gpio_mode_t _mode, const char * type)
+void SWITCH::Setup(gpio_num_t _pin, gpio_mode_t _mode)
 {
   pin = _pin;
   SWITCH_events = xEventGroupCreate();
@@ -126,7 +126,6 @@ void SWITCH::Setup(gpio_num_t _pin, gpio_mode_t _mode, const char * type)
   gpio_install_isr_service(0);
   gpio_isr_handler_add(pin, ISR_Handler, this);
   status = gpio_get_level(pin);
-  this->HassSwitchDescovery = std::make_unique<homeassistant::BinarySensorDiscovery>(hassDevice, type);
   StartTask(this);
 
 }

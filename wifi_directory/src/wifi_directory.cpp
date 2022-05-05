@@ -101,7 +101,8 @@ esp_err_t WifiDirectory::Init()
         hotspot.password = "11112222";
         wifiList.push_back(hotspot);
         wifiFile.println((const char*)StructToJson(hotspot));
-        int ok = wifiFile.close();
+        int ok = 0;
+        wifiFile.close();
         if (ret == ESP_OK && ok == 0)
         {
             isInitialized = true;
@@ -218,7 +219,8 @@ esp_err_t WifiDirectory::Save()
     {
         wifiFile.println(StructToJson(*it));
     }
-    ret = wifiFile.close() == 0 ? ESP_OK : ESP_FAIL;
+    ret = ESP_OK;
+    wifiFile.close();
     if (ret != ESP_OK)
     {
         LOGE(TAG, "Error: Changes may not be saved..");
