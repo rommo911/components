@@ -137,7 +137,7 @@ class Mqtt : public Config
 		.client_cert_len = 0,							/*!< Length of the buffer pointed to by client_cert_pem. May be 0 for null-terminated pem */
 		.client_key_pem = NULL,							/*!< Pointer to private key data in PEM or DER format for SSL mutual authentication, default is NULL, not required if mutual authentication is not needed. If it is not NULL, also `client_cert_pem` has to be provided. PEM-format must have a terminating NULL-character. DER-format requires the length to be passed in client_key_len */
 		.client_key_len = 0,							/*!< Length of the buffer pointed to by client_key_pem. May be 0 for null-terminated pem */
-		.transport = MQTT_TRANSPORT_OVER_TCP,			/*!< overrides URI transport */
+		.transport = MQTT_TRANSPORT_UNKNOWN,			/*!< overrides URI transport */
 		.refresh_connection_after_ms = 0,				/*!< Refresh connection after this value (in milliseconds) */
 		.psk_hint_key = NULL,							/*!< Pointer to PSK struct defined in esp_tls.h to enable PSK authentication (as alternative to certificate verification). If not NULL and server/client certificates are NULL, PSK is enabled */
 		.use_global_ca_store = 0,

@@ -81,16 +81,16 @@ WifiDirectory::WifiDirectory()
  */
 esp_err_t WifiDirectory::Init()
 {
-    esp_err_t ret = ESP_FAIL;
+    esp_err_t ret = ESP_OK;
     WifiDirectory::HotspotEntry hotspot = {};
     if (!LittleFS.begin(true)) {
         return ESP_FAIL;
     }
-    File wifiFile = LittleFS.open("config1.txt", "r");
+    File wifiFile = LittleFS.open("/config1.txt", "r");
     if (!wifiFile) // no saved file // create new one
     {
         LOGW(TAG, "No file found.. Creating new file w/config1.txt ..  ");
-        wifiFile = LittleFS.open("config1.txt", "w+b");
+        wifiFile = LittleFS.open("/config1.txt", "w+b");
         if (!wifiFile)
         {
             LOGE(TAG, "File creation failed ... exiting");
@@ -101,8 +101,8 @@ esp_err_t WifiDirectory::Init()
         hotspot.password = "11112222";
         wifiList.push_back(hotspot);
         wifiFile.println((const char*)StructToJson(hotspot));
-        wifiFile.close();
-        if (ret == ESP_OK)
+        int ok = wifiFile.close();
+        if (ret == ESP_OK && ok == 0)
         {
             isInitialized = true;
             return ESP_OK;
@@ -206,7 +206,7 @@ esp_err_t WifiDirectory::Save()
     if (!LittleFS.begin(true)) {
         return ESP_FAIL;
     }
-    File wifiFile = LittleFS.open("config1.txt", "w+");
+    File wifiFile = LittleFS.open("/config1.txt", "w+");
     if (!wifiFile) // no saved file // create new one
     {
         LOGE(TAG, "Fatal error!, file open for saving error , unmounting");
