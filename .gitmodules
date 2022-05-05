@@ -1,9 +1,3 @@
-[submodule "Arduino_lib"]
-	path = Arduino_lib
-	url = https://github.com/rommo911/Arduino_lib.git
-[submodule "Arduino"]
-	path = Arduino
-	url = https://github.com/rommo911/Arduino.git
 [submodule "esp-who"]
 	path = esp-who
 	url = https://github.com/rommo911/esp-who.git
