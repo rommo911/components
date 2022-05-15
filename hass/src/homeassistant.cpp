@@ -12,7 +12,15 @@ Copyright (C) 2019-2021 by Maxim Prokhorov <prokhorov dot max at outlook dot com
 #include "homeassistant.h"
 #include "esp_log.h"
 namespace homeassistant {
-
+    static std::vector<Discovery *> discoveryList;
+    void UpdateDiscoveryList()
+    {
+        for (auto& d : discoveryList)
+        {
+            d->UpdateDevCtx();
+            d->ProcessJson();
+        }
+    }
     static constexpr char mqtt_payload_online[] = "online";
     static constexpr char mqtt_payload_offline[] = "offline";
     static constexpr char payload_on[] = "on";
@@ -36,19 +44,17 @@ namespace homeassistant {
         Unknown = 0xFF
     };
 
-    BaseDevCtx::BaseDevCtx(Device_Description_t des) :
-        deviceDescription(des)
+    BaseDevCtx::BaseDevCtx(Device_Description_t& des) : deviceDescription(des)
     {
-        _json["dev"]["name"] = deviceDescription.name.c_str();
-        _json["dev"]["mdl"] = deviceDescription.model.c_str();
-        _json["dev"]["sw"] = deviceDescription.version.c_str();
-        _json["dev"]["mf"] = deviceDescription.manufacturer.c_str();
-        _json["room"] = deviceDescription.room.c_str();
-        _json["dev"]["identifiers"] = { deviceDescription.MAC.c_str() };
+        UpdateDescription();
     }
-    void BaseDevCtx::SetDescription(Device_Description_t des)
+    void BaseDevCtx::SetDescription(Device_Description_t& des)
     {
         deviceDescription = des;
+        UpdateDescription();
+    }
+    void BaseDevCtx::UpdateDescription()
+    {
         _json.clear();
         _json["dev"]["name"] = deviceDescription.name.c_str();
         _json["dev"]["mdl"] = deviceDescription.model.c_str();
@@ -56,7 +62,6 @@ namespace homeassistant {
         _json["dev"]["mf"] = deviceDescription.manufacturer.c_str();
         _json["room"] = deviceDescription.room.c_str();
         _json["dev"]["identifiers"] = { deviceDescription.MAC.c_str() };
-
     }
     const std::string& BaseDevCtx::name() const {
         return deviceDescription.name;
@@ -72,26 +77,21 @@ namespace homeassistant {
         return _json;
     }
 
-    // - Discovery object is expected to accept Context reference as input
-    //   (and all implementations do just that)
-    // - topic() & message() return refs, since those *may* be called multiple times before advancing to the next 'entity'
-    // - We use short-hand names right away, since we don't expect this to be used to generate yaml
-    // - In case the object uses the JSON makeObject() as state, make sure we don't use it (state)
-    //   and the object itself after next() or ok() return false
-    // - Make sure JSON state is not created on construction, but lazy-loaded as soon as it is needed.
-    //   Meaning, we don't cause invalid refs immediatly when there are more than 1 discovery object present and we reset the storage.
-
-
-
-
     Discovery::Discovery(BaseDevCtx& ctx, const std::string& _hass_mqtt_device) :
         _BaseDevCtx(ctx),
         hass_mqtt_device(_hass_mqtt_device)
     {
-        
+        discoveryList.push_back(this);
     }
+    void Discovery::UpdateDevCtx()
+    {
+        _BaseDevCtx.UpdateDescription();
+    }
+
     void Discovery::ProcessJson()
     {
+        _BaseDevCtx.UpdateDescription();
+        discoveryJson.clear();
         discoveryJson = _BaseDevCtx.JsonObject();
         state_topic = "~/";
         command_topic = "~/";
@@ -256,10 +256,10 @@ namespace homeassistant {
         val += _sensorClass;
         val += "}}";
         this->discoveryJson["value_template"] = val.c_str();
-       /* if ((__unit.length()) > 0)
-        {
-            this->discoveryJson["unit_of_meas"] = __unit.c_str();
-        }*/
+        /* if ((__unit.length()) > 0)
+         {
+             this->discoveryJson["unit_of_meas"] = __unit.c_str();
+         }*/
         this->discoveryJson["payload_on"] = true;
         this->discoveryJson["payload_off"] = false;
         this->discoveryJson["device_class"] = _sensorClass.c_str();

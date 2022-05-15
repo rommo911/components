@@ -9,6 +9,8 @@
 #include "nlohmann/json.hpp"
 #include <string>
 #include <sstream>
+#include <vector>
+#include <esp_log.h>
 #ifndef HOMEASSISTANT_PREFIX
 #define HOMEASSISTANT_PREFIX    "homeassistant" // Default MQTT prefix
 #endif
@@ -19,8 +21,6 @@
 
 
 namespace homeassistant {
-
-
     class Switch_Class_t
     {
     public:
@@ -40,17 +40,16 @@ namespace homeassistant {
 
     class BaseDevCtx {
     protected:
-        Device_Description_t deviceDescription;
-        nlohmann::json _json{  };
+        Device_Description_t &deviceDescription;
+        nlohmann::json _json{};
     public:
-        BaseDevCtx() {}
-        BaseDevCtx(Device_Description_t des);
-        void SetDescription(Device_Description_t des);
+        BaseDevCtx(Device_Description_t &des);
+        void SetDescription(Device_Description_t &des);
+        void UpdateDescription();
         const std::string& name()const;
         const std::string& room()const;
         const std::string& MAC()const;
         nlohmann::json JsonObject()const;
-
     };
 
     class Discovery {
@@ -73,13 +72,13 @@ namespace homeassistant {
         static constexpr char light_t[] = "light";
         static constexpr char binary_sensor_t[] = "binary_sensor";
         static constexpr char sensor_t[] = "sensor";
-
     public:
 
         Discovery(BaseDevCtx& ctx, const std::string& _hass_mqtt_device);
         virtual ~Discovery() {
         }
         void ProcessJson();
+        void UpdateDevCtx();
         const std::string DiscoveryTopic();
         const std::string& AvailabilityTopic();
         std::string StatusTopic();
@@ -94,7 +93,7 @@ namespace homeassistant {
         void DumpDebugAll();
     };
 
-
+    void UpdateDiscoveryList();
     class RelayDiscovery : public Discovery {
     public:
         RelayDiscovery(BaseDevCtx& ctx, const std::string& switch_name, const char* class_type) : Discovery(ctx, relay_t), _switch_name(switch_name), _class_type(class_type)
@@ -117,7 +116,6 @@ namespace homeassistant {
     public:
         BlindDiscovery(BaseDevCtx& ctx, const char* class_type) : Discovery(ctx, Discovery::cover_t), _class_type(class_type)
         {
-            ProcessJson();
         }
         std::string GetSetPosTopic() { return  std::string(topics_prefix.str() + setPosTopic.erase(0, 1)); }
         std::string GetPosTopic() { return  std::string(topics_prefix.str() + "/position"); }
@@ -143,7 +141,6 @@ namespace homeassistant {
     public:
         SensorDiscovery(BaseDevCtx& ctx, const char* sensorClass, const std::string& unit) : Discovery(ctx, sensor_t), name(sensorClass), _sensorClass(sensorClass), __unit(unit)
         {
-            ProcessJson();
         }
         const std::string& GetClass() { return name; }
         static constexpr char	aqi[] = "aqi";
@@ -185,7 +182,6 @@ namespace homeassistant {
     public:
         BinarySensorDiscovery(BaseDevCtx& ctx, const char* sensorClass) : Discovery(ctx, binary_sensor_t), name(sensorClass), _sensorClass(sensorClass)
         {
-            ProcessJson();
         }
         const std::string& GetClass() { return name; }
         static constexpr char	None[] = "None";
