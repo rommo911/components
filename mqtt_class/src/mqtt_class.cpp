@@ -29,7 +29,6 @@
 #include "utilities.hpp"
 #include <memory>
 #include <string>
-using NvsPointer = std::unique_ptr<NVS>;
 const esp_mqtt_client_config_t Mqtt::mqttDefaultCfg;
 extern const char mqtt_client_crt_start[] asm("_binary_mqtt_client_crt_start");
 extern const char mqtt_client_crt_end[] asm("_binary_mqtt_client_crt_end");
@@ -48,9 +47,8 @@ RTC_DATA_ATTR uint8_t Mqtt::disconnectionCounter;
  * @brief Constructor , rest topic and config
  *
  */
-Mqtt::Mqtt(EventLoop_p_t& eventLoop, const std::string& device_) : Config(TAG), Loop(eventLoop)
+Mqtt::Mqtt(EventLoop_p_t& eventLoop) : Config(TAG), Loop(eventLoop)
 {
-	MqttUserConfig.deviceStr = device_;
 	privateTopicList.clear();
 	lock = Semaphore::CreateUnique(this->TAG);
 	InitThisConfig();
@@ -64,7 +62,7 @@ Mqtt::Mqtt(EventLoop_p_t& eventLoop, const std::string& device_) : Config(TAG), 
  * @param mqttCfg
  * @return esp_err_t
  */
-esp_err_t Mqtt::Init(const esp_mqtt_client_config_t& mqttCfg)
+esp_err_t Mqtt::Init(const std::string& device,const esp_mqtt_client_config_t& mqttCfg)
 {
 	LOG_MQTT_V(TAG, " initialization started ");
 	if (isInitialized || isConnected)
@@ -72,6 +70,7 @@ esp_err_t Mqtt::Init(const esp_mqtt_client_config_t& mqttCfg)
 		LOGW(TAG, " Already initialized ! OK, will retry connection automatically");
 		return ESP_ERR_INVALID_STATE;
 	}
+	MqttUserConfig.deviceStr = device;;
 	MqttUserConfig.TopicBase = MqttUserConfig.roomName + "/" + MqttUserConfig.deviceStr + "/";
 	MqttUserConfig.activeAPIConfig = mqttCfg;
 	LOG_MQTT(TAG, " MqttUserConfig.clienId = %s", MqttUserConfig.clienId.c_str());
@@ -181,7 +180,7 @@ esp_err_t Mqtt::Publish(const MqttMsg_t& msg) const
 		ASSERT_INIT_AND_RETURN_ERR(Mqtt::isInitialized, TAG)
 	}
 	LOG_MQTT_V(TAG, "Sending Message %s in topic %s with Qos %d", msg.payload.c_str(), msg.topic.c_str(), msg.qos);
-	int ret = esp_mqtt_client_enqueue(MqttUserConfig.clentAPIHandle, msg.topic.c_str(), msg.payload.c_str(), length, msg.qos, msg.retained ? 1 : 0, true);
+	int ret = esp_mqtt_client_enqueue(MqttUserConfig.clentAPIHandle, msg.topic.c_str(), msg.payload.c_str(), length, msg.qos, msg.retained, true);
 	if (ret == -1)
 	{
 		LOGE(TAG, "ERRRO Sending Message in topic %s with Qos %d with error", msg.topic.c_str(), msg.qos);

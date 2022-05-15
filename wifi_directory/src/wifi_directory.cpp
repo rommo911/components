@@ -60,6 +60,9 @@ const char WifiDirectory::check[];
 WifiDirectory::~WifiDirectory()
 {
     wifiList.clear();
+    if (!LittleFS.begin(false,"/littlefs", 2, "spiffs")) {
+        
+    }
 }
 
 /**
@@ -84,7 +87,9 @@ esp_err_t WifiDirectory::Init()
     esp_err_t ret = ESP_OK;
     WifiDirectory::HotspotEntry hotspot = {};
     if (!LittleFS.begin(true)) {
+        if (!LittleFS.begin(false,"/data", 2, "data")) {
         return ESP_FAIL;
+    }
     }
     File wifiFile = LittleFS.open("/config1.txt", "r");
     if (!wifiFile) // no saved file // create new one

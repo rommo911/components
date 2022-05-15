@@ -70,9 +70,9 @@ class Mqtt : public Config
 	const Event_t EVENT_SUBSCRIBED = { TAG, EventID_t(6) };
 	const Event_t EVENT_FAILED_RECONNECT = { TAG, EventID_t(7) };
 	//
-	Mqtt(EventLoop_p_t& eventLoop, const std::string& device);
+	Mqtt(EventLoop_p_t& eventLoop);
 	~Mqtt();
-	esp_err_t Init(const esp_mqtt_client_config_t& mqttCfg = mqttDefaultCfg);
+	esp_err_t Init(const std::string& device="ESP32", const esp_mqtt_client_config_t& mqttCfg = mqttDefaultCfg);
 	void SetStationMacAddress(const uint8_t* mac_6);
 	void SetActiveApMacAddress(const uint8_t* mac_6);
 	esp_err_t Disconnect();
@@ -86,7 +86,7 @@ class Mqtt : public Config
 	esp_err_t Publish(const std::string&, const std::string&, uint8_t qos = 1, bool retained = false) const;
 	esp_err_t Publish(const char*, const char*, uint8_t qos = 1, bool retained = false) const;
 	esp_err_t Publish(const char*, const std::string&, uint8_t qos = 1, bool retained = false) const;
-	esp_err_t Publish(std::pair<std::string, std::string> data, uint8_t qos, bool retained) const;
+	esp_err_t Publish(std::pair<std::string, std::string> data, uint8_t qos=0, bool retained=false) const;
 	const std::string& GetTopicBase() const;
 	esp_err_t SetLastWill(const std::string& LwTopic, const std::string& lwMsg);
 	esp_err_t SetConfigurationParameters(const json& config_in) override;
