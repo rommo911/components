@@ -12,7 +12,7 @@ Copyright (C) 2019-2021 by Maxim Prokhorov <prokhorov dot max at outlook dot com
 #include "homeassistant.h"
 #include "esp_log.h"
 namespace homeassistant {
-    static std::vector<Discovery *> discoveryList;
+    static std::vector<Discovery*> discoveryList;
     void UpdateDiscoveryList()
     {
         for (auto& d : discoveryList)
@@ -61,6 +61,9 @@ namespace homeassistant {
         _json["dev"]["sw"] = deviceDescription.version.c_str();
         _json["dev"]["mf"] = deviceDescription.manufacturer.c_str();
         _json["room"] = deviceDescription.room.c_str();
+        _json["dev"]["sa"] = deviceDescription.room.c_str();
+        _json["dev"]["cns"] = deviceDescription.connections.c_str();
+        _json["dev"]["cu"] = deviceDescription.config_url.c_str();
         _json["dev"]["identifiers"] = { deviceDescription.MAC.c_str() };
     }
     const std::string& BaseDevCtx::name() const {
@@ -173,8 +176,7 @@ namespace homeassistant {
         //
         this->unique_id << _class_type;
         //
-        this->positionTopic = state_topic;
-        this->positionTopic += "position";
+
         this->state_topic += "state";
         //
         this->discovery_topic << unique_id.str().c_str();
@@ -182,30 +184,27 @@ namespace homeassistant {
         //
         this->topics_prefix << "/" << _class_type;
         //
-        //
-        this->discoveryJson["payload_open"] = "OPEN";
         this->discoveryJson["~"] = topics_prefix.str().c_str();
         this->discoveryJson["payload_close"] = "CLOSE";
-        this->discoveryJson["availability_topic"] = availability_topic.c_str();
-        this->setPosTopic = command_topic + "set_pos";
-        this->discoveryJson["set_position_topic"] = setPosTopic.c_str();
-        command_topic += "cmd";
-        this->discoveryJson["command_topic"] = command_topic.c_str();
-        this->discoveryJson["position_topic"] = positionTopic.c_str();
-        this->discoveryJson["name"] = unique_id.str().c_str();
-        this->discoveryJson["state_topic"] = state_topic.c_str();
         this->discoveryJson["payload_stop"] = "STOP";
+        this->discoveryJson["payload_open"] = "OPEN";
+        this->discoveryJson["availability_topic"] = availability_topic.c_str();
+        this->discoveryJson["set_position_topic"] = "~/set_pos";
+        this->discoveryJson["state_topic"] =  "~/state";
+        this->discoveryJson["command_topic"] = "~/cmd";
+        this->discoveryJson["position_topic"] = "~/position";
+        this->discoveryJson["name"] = unique_id.str().c_str();
         this->discoveryJson["state_open"] = "open";
         this->discoveryJson["state_opening"] = "opening";
         this->discoveryJson["state_closed"] = "closed";
         this->discoveryJson["state_closing"] = "closing";
-        this->discoveryJson["position_template"] = "{{ value_json.position }}";
+        this->discoveryJson["position_template"] = "{{ value.position }}";
         this->discoveryJson["value_template"] = "{{ value_json.state }}";
         this->discoveryJson["device_class"] = _class_type;
         this->discoveryJson["unique_id"] = unique_id.str().c_str();
         this->discoveryJson["position_open"] = 100;
         this->discoveryJson["position_closed"] = 0;
-        this->discovery_message = discoveryJson.dump(5);
+        this->discovery_message = discoveryJson.dump(0);
     }
 
     void SensorDiscovery::ProcessFinalJson()

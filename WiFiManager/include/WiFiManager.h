@@ -154,9 +154,6 @@ typedef std::shared_ptr<IntParameter>   WiFiManagerIntParameter_p;
 typedef std::shared_ptr<FloatParameter>   WiFiManagerFloatParameter_p;
 #define WiFiManagerFloatParameter_p_Create std::make_shared<FloatParameter>
 
-
-
-
 class WiFiManager
 {
 public:

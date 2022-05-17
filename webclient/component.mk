@@ -1,4 +1,0 @@
-COMPONENT_ADD_INCLUDEDIRS := include
-COMPONENT_SRCDIRS := . src
-
-COMPONENT_SUBMODULES := aladin_webserver

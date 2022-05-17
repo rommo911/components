@@ -36,6 +36,9 @@ namespace homeassistant {
         std::string room;
         std::string MAC;
         std::string model;
+        std::string config_url;
+        std::string suggested_area;
+        std::string connections;
     } Device_Description_t;
 
     class BaseDevCtx {
@@ -117,7 +120,7 @@ namespace homeassistant {
         BlindDiscovery(BaseDevCtx& ctx, const char* class_type) : Discovery(ctx, Discovery::cover_t), _class_type(class_type)
         {
         }
-        std::string GetSetPosTopic() { return  std::string(topics_prefix.str() + setPosTopic.erase(0, 1)); }
+        std::string GetSetPosTopic() { return  std::string(topics_prefix.str() + "/set_pos"); }
         std::string GetPosTopic() { return  std::string(topics_prefix.str() + "/position"); }
         static constexpr char	None[] = "None";
         static constexpr char	awning[] = "awning";
