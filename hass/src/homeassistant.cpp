@@ -62,8 +62,8 @@ namespace homeassistant {
         _json["dev"]["mf"] = deviceDescription.manufacturer.c_str();
         _json["room"] = deviceDescription.room.c_str();
         _json["dev"]["sa"] = deviceDescription.room.c_str();
-        _json["dev"]["cns"] = deviceDescription.connections.c_str();
-        _json["dev"]["cu"] = deviceDescription.config_url.c_str();
+       // _json["dev"]["cns"] = deviceDescription.connections.c_str();
+        //_json["dev"]["cu"] = deviceDescription.config_url.c_str();
         _json["dev"]["identifiers"] = { deviceDescription.MAC.c_str() };
     }
     const std::string& BaseDevCtx::name() const {
@@ -198,7 +198,7 @@ namespace homeassistant {
         this->discoveryJson["state_opening"] = "opening";
         this->discoveryJson["state_closed"] = "closed";
         this->discoveryJson["state_closing"] = "closing";
-        this->discoveryJson["position_template"] = "{{ value.position }}";
+        this->discoveryJson["position_template"] = "{{ value_json.position }}";
         this->discoveryJson["value_template"] = "{{ value_json.state }}";
         this->discoveryJson["device_class"] = _class_type;
         this->discoveryJson["unique_id"] = unique_id.str().c_str();
