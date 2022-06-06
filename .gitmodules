@@ -4,3 +4,9 @@
 [submodule "arduino-esp32"]
 	path = arduino-esp32
 	url = https://github.com/rommo911/arduino-esp32.git
+[submodule "WebConfig"]
+	path = WebConfig
+	url = https://github.com/rommo911/WebConfig.git
+[submodule "ArduinoJson"]
+	path = ArduinoJson
+	url = https://github.com/bblanchon/ArduinoJson.git
