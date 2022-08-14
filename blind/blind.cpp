@@ -3,8 +3,9 @@
 #include <string>
 #include <cstdlib>
 #include "nvs_tools.h"
+xQueueHandle Blind::InterruptQueue = NULL;
 
-Blind::Blind( EventLoop_p_t& _loop,
+Blind::Blind(EventLoop_p_t& _loop,
     gpio_num_t _pin_up,
     gpio_num_t _pin_down
 ) : Config(TAG), loop(_loop),
@@ -13,19 +14,17 @@ pin_down(_pin_down)
 {
     timer = std::make_unique<ESPTimer>([this](void* arg) {TimerExecute(); }, "blind");
     InitThisConfig();
-    gpio_pad_select_gpio(_pin_up);
-    gpio_pad_select_gpio(pin_down);
-    gpio_set_direction(pin_up, GPIO_MODE_OUTPUT);
-    gpio_set_direction(pin_down, GPIO_MODE_OUTPUT);
-
-    gpio_set_level(pin_up, 0);
-    gpio_set_level(pin_down, 0);
     if (this->isInverted)
         std::swap(pin_up, pin_down);
+    timerIntr = std::make_unique<ESPTimer>([this](void* arg) { TimerExecuteIntr(); }, "blind2");
+    InterruptQueue = xQueueCreate(10, sizeof(uint32_t));
+    Intertask = new AsyncTask([this](void* arg) {this->InterruptTask(); }, "blind interrupt", (void*)this);
+    EnableInterrupt(true);
 }
 
 Blind::~Blind()
 {
+    EnableInterrupt(false);
     gpio_set_level(pin_up, 0);
     gpio_set_level(pin_down, 0);
 }
@@ -33,16 +32,7 @@ Blind::~Blind()
 bool Blind::handle_set_per(const std::string& str1)
 {
     uint8_t val = std::atoi(str1.c_str());
-    try
-    {
-        bool ret = handle_set_per_uint(val);
-        return ret;
-    }
-    catch (const std::exception& e)
-    {
-        std::cout << e.what() << '\n';
-    }
-    return false;
+    return handle_set_per_uint(val);
 }
 
 bool Blind::IsBusy() const
@@ -54,13 +44,14 @@ bool Blind::handle_set_per_uint(uint8_t New_percentage)
 {
     if (New_percentage <= 100)
     {
+        uint8_t New_percentage__ = New_percentage;
         if (New_percentage == 0 && perc <= 5)
         {
-            perc = 75;
+            New_percentage__ = 30;
         }
-        if (New_percentage == 100 && perc >= 98)
+        else  if (New_percentage == 100 && perc >= 90)
         {
-            perc = 25;
+            New_percentage__ = 60;
         }
         if (perc == New_percentage)
         {
@@ -69,18 +60,17 @@ bool Blind::handle_set_per_uint(uint8_t New_percentage)
         }
         else
         {
-            isBusy = true;
-            loop->post_event(EVENT_BLIND_MOVING);
+            EnableInterrupt(false);
             if (perc > New_percentage)
             {
                 movingDirection = Direction_Down;
-                perc = New_percentage;
+                perc = New_percentage__;
                 timer->start_periodic(std::chrono::milliseconds(DownTime / 100), this);
             }
             else
             {
                 movingDirection = Direction_UP;
-                perc = New_percentage;
+                perc = New_percentage__;
                 timer->start_periodic(std::chrono::milliseconds(UpTime / 100), this);
             }
         }
@@ -93,9 +83,8 @@ bool Blind::handle_set_CMD(MovingDirection_t direction)
     movingDirection = direction;
     if (direction != Direction_Stop)
     {
-        isBusy = true;
         commandMode = true;
-        loop->post_event(EVENT_BLIND_MOVING);
+        EnableInterrupt(false);
         if (direction == Direction_Down)
         {
             timer->start_periodic(std::chrono::milliseconds(DownTime / 100));
@@ -123,6 +112,7 @@ void Blind::Cancel()
     movingDirection = Direction_Stop;
     gpio_set_level(pin_up, 0);
     gpio_set_level(pin_down, 0);
+    EnableInterrupt(true);
     perc = last_perc;
 }
 
@@ -130,9 +120,10 @@ static  int throttle = 0;
 
 void Blind::TimerExecute()
 {
-    if (movingDirection == Direction_Stop)
+    switch (movingDirection)
     {
-
+    case Direction_Stop:
+    {
         gpio_set_level(pin_up, 0);
         gpio_set_level(pin_down, 0);
         movingDirection = Direction_Stop;
@@ -140,19 +131,21 @@ void Blind::TimerExecute()
         throttle = 0;
         isBusy = false;
         commandMode = false;
+        perc = last_perc;
         ESP_LOGI(TAG, "STOP");
         SaveToNVS();
         timer->stop();
-        return;
+        EnableInterrupt(true);
+        break;
     }
-    else if (movingDirection == Direction_UP)
+    case Direction_UP:
     {
+        isBusy = true;
         gpio_set_level(pin_up, 1);
         gpio_set_level(pin_down, 0);
         if (last_perc < 100)
         {
             last_perc++;
-            //ESP_LOGI(TAG, "UP %d", last_perc);
             if (last_perc == perc && !commandMode)
             {
                 movingDirection = Direction_Stop;
@@ -162,9 +155,11 @@ void Blind::TimerExecute()
         {
             movingDirection = Direction_Stop;
         }
+        break;
     }
-    else if (movingDirection == Direction_Down)
+    case Direction_Down:
     {
+        isBusy = true;
         gpio_set_level(pin_up, 0);
         gpio_set_level(pin_down, 1);
         if (last_perc > 0)
@@ -179,6 +174,8 @@ void Blind::TimerExecute()
         {
             movingDirection = Direction_Stop;
         }
+        break;
+    }
     }
     loop->post_event(EVENT_BLIND_CHNAGED, std::chrono::milliseconds(20));
     if (commandMode)
@@ -317,4 +314,137 @@ esp_err_t Blind::LoadFromNVS()
         perc = last_perc;
     }
     return ret;
+}
+void Blind::EnableInterrupt(const bool val)
+{
+    if (val)
+    {
+        gpio_install_isr_service(0);
+        gpio_set_direction(pin_up, GPIO_MODE_INPUT);
+        gpio_set_direction(pin_down, GPIO_MODE_INPUT);
+        gpio_set_intr_type(pin_up, GPIO_INTR_ANYEDGE);
+        gpio_set_intr_type(pin_down, GPIO_INTR_ANYEDGE);
+        gpio_isr_handler_add(pin_up, Blind::up_isr_handler, static_cast<void*>(this));
+        gpio_isr_handler_add(pin_down, Blind::down_isr_handler,static_cast<void*>(this));
+
+    }
+    else
+    {
+        gpio_isr_handler_remove(pin_up);
+        gpio_isr_handler_remove(pin_down);
+        gpio_set_direction(pin_up, GPIO_MODE_OUTPUT);
+        gpio_set_direction(pin_down, GPIO_MODE_OUTPUT);
+        gpio_set_level(pin_up, 0);
+        gpio_set_level(pin_down, 0);
+        timerIntr->stop();
+    }
+}
+
+void Blind::TimerExecuteIntr()
+{
+    if (movingDirection == Direction_Stop)
+    {
+        throttle = 0;
+        isBusy = false;
+        commandMode = true;
+        SaveToNVS();
+        perc = last_perc;
+        loop->post_event(EVENT_BLIND_STOPPED);
+        timerIntr->stop();
+
+    }
+    else if (movingDirection == Direction_UP)
+    {
+        isBusy = true;
+        if (last_perc < 100)
+        {
+            last_perc++;
+
+        }
+        else
+        {
+            movingDirection = Direction_Stop;
+        }
+    }
+    else if (movingDirection == Direction_Down)
+    {
+        isBusy = true;
+        if (last_perc > 0)
+        {
+            last_perc--;
+        }
+        else
+        {
+            movingDirection = Direction_Stop;
+        }
+    }
+    loop->post_event(EVENT_BLIND_CHNAGED, std::chrono::milliseconds(20));
+
+}
+
+void Blind::InterruptTask()
+{
+    while (true)
+    {
+        InterruptState_t event;
+        auto res = xQueueReceive(InterruptQueue, &event, portMAX_DELAY);
+        if (res == pdTRUE)
+        {
+            switch ((event))
+            {
+            case InterruptState_t::Up:
+            {
+                commandMode = true;
+                movingDirection = MovingDirection_t::Direction_UP;
+                timerIntr->start_periodic(std::chrono::milliseconds(UpTime / 100));
+            }
+            break;
+            case InterruptState_t::Down:
+            {
+                commandMode = true;
+                movingDirection = MovingDirection_t::Direction_Down;
+                timerIntr->start_periodic(std::chrono::milliseconds(UpTime / 100));
+            }
+            break;
+            case InterruptState_t::Stop:
+            {
+                movingDirection = MovingDirection_t::Direction_Stop;
+            }
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        //xQueueReset(InterruptQueue);
+    }
+
+}
+
+void Blind::up_isr_handler(void* arg)
+{
+    Blind* _this = static_cast<Blind*>(arg);
+    if (gpio_get_level(_this->pin_up) == 1)
+    {
+        _this->InterruptState = InterruptState_t::Up;
+    }
+    else
+    {
+        _this->InterruptState = InterruptState_t::Stop;
+    }
+    if (_this->InterruptQueue != NULL)
+        xQueueSendFromISR(_this->InterruptQueue, &_this->InterruptState, NULL);
+
+}
+
+void Blind::down_isr_handler(void* arg)
+{
+    Blind* _this = static_cast<Blind*>(arg);
+    if (gpio_get_level(_this->pin_down) == 1)
+    {
+        _this->InterruptState = InterruptState_t::Down;
+    }
+    else
+    {
+        _this->InterruptState = InterruptState_t::Stop;
+    }
+    if (_this->InterruptQueue != NULL)
+        xQueueSendFromISR(_this->InterruptQueue, &_this->InterruptState, NULL);
 }

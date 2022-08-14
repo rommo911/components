@@ -62,7 +62,7 @@ Mqtt::Mqtt(EventLoop_p_t& eventLoop) : Config(TAG), Loop(eventLoop)
  * @param mqttCfg
  * @return esp_err_t
  */
-esp_err_t Mqtt::Init(const std::string& device,const esp_mqtt_client_config_t& mqttCfg)
+esp_err_t Mqtt::Init(const std::string& device, const esp_mqtt_client_config_t& mqttCfg)
 {
 	LOG_MQTT_V(TAG, " initialization started ");
 	if (isInitialized || isConnected)
@@ -179,8 +179,11 @@ esp_err_t Mqtt::Publish(const MqttMsg_t& msg) const
 	{
 		ASSERT_INIT_AND_RETURN_ERR(Mqtt::isInitialized, TAG)
 	}
-	LOG_MQTT_V(TAG, "Sending Message %s in topic %s with Qos %d", msg.payload.c_str(), msg.topic.c_str(), msg.qos);
-	int ret = esp_mqtt_client_enqueue(MqttUserConfig.clentAPIHandle, msg.topic.c_str(), msg.payload.c_str(), length, msg.qos, msg.retained, true);
+	LOG_MQTT_V(TAG, "Sending Message %s in topic %s with Qos %d , retained %d", msg.payload.c_str(), msg.topic.c_str(), msg.qos,msg.retained);
+	char test[500] = {};
+	sprintf(test, "qos :%d retainde %d", msg.qos, msg.retained);
+	 /*ret = esp_mqtt_client_publish(MqttUserConfig.clentAPIHandle, msg.topic.c_str(), test, strlen(test), msg.qos, msg.retained);*/
+	int ret = esp_mqtt_client_publish(MqttUserConfig.clentAPIHandle, msg.topic.c_str(), msg.payload.c_str(), length, msg.qos, msg.retained);
 	if (ret == -1)
 	{
 		LOGE(TAG, "ERRRO Sending Message in topic %s with Qos %d with error", msg.topic.c_str(), msg.qos);
@@ -200,7 +203,7 @@ void Mqtt::AddToSubscribeList(std::string&& topic)
 
 }
 
-esp_err_t Mqtt::Publish(const char* topic, const char* data, uint8_t qos, bool retained) const
+esp_err_t Mqtt::Publish(const char* topic, const char* data, const uint8_t qos, const bool retained) const
 {
 	MqttMsg_t msg = {
 		.retained = retained,
@@ -208,12 +211,11 @@ esp_err_t Mqtt::Publish(const char* topic, const char* data, uint8_t qos, bool r
 		.payload = data,
 		.topic = topic,
 		.length = strlen(data),
-		.topicLen = strlen(topic),
 	};
 	return Publish(msg);
 }
 
-esp_err_t Mqtt::Publish(const std::string& topic, const std::string& data, uint8_t qos, bool retained) const
+esp_err_t Mqtt::Publish(const std::string& topic, const std::string& data, const uint8_t qos, const bool retained) const
 {
 	MqttMsg_t msg = {
 		.retained = retained,
@@ -221,11 +223,10 @@ esp_err_t Mqtt::Publish(const std::string& topic, const std::string& data, uint8
 		.payload = data.c_str(),
 		.topic = topic.c_str(),
 		.length = data.length(),
-		.topicLen = topic.length(),
 	};
 	return Publish(msg);
 }
-esp_err_t Mqtt::Publish(std::pair<std::string, std::string> data, uint8_t qos, bool retained) const
+esp_err_t Mqtt::Publish(std::pair<std::string, std::string> data, const uint8_t qos, const bool retained) const
 {
 	MqttMsg_t msg = {
 		.retained = retained,
@@ -233,12 +234,11 @@ esp_err_t Mqtt::Publish(std::pair<std::string, std::string> data, uint8_t qos, b
 		.payload = data.second.c_str(),
 		.topic = data.first.c_str(),
 		.length = data.second.length(),
-		.topicLen = data.first.length(),
 	};
 	return Publish(msg);
 }
 
-esp_err_t Mqtt::Publish(const char* topic, const std::string& data, uint8_t qos, bool retained) const
+esp_err_t Mqtt::Publish(const char* topic, const std::string& data, const uint8_t qos, const bool retained) const
 {
 	MqttMsg_t msg = {
 		.retained = retained,
@@ -246,7 +246,6 @@ esp_err_t Mqtt::Publish(const char* topic, const std::string& data, uint8_t qos,
 		.payload = data.c_str(),
 		.topic = topic,
 		.length = data.length(),
-		.topicLen = strlen(topic),
 	};
 	return Publish(msg);
 }

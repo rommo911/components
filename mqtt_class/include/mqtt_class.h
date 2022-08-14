@@ -28,7 +28,7 @@ extern std::shared_ptr<Mqtt> MqttDOL;
 
 class Mqtt : public Config
 {
-	private:
+private:
 	EventLoop_p_t Loop;
 	struct MqttUserConfig_t
 	{
@@ -48,16 +48,15 @@ class Mqtt : public Config
 	std::vector<mqtt_data_callback_describtor_t> mqttRegisteredCommands;
 	SemaphorePointer_t lock;
 
-	public:
+public:
 	static constexpr char TAG[] = "Mqtt-DOL";
 	struct MqttMsg_t
 	{
-		bool retained;
-		uint8_t qos;
+		const bool retained;
+		const uint8_t qos;
 		const std::string& payload;
 		const std::string& topic;
-		size_t length;
-		size_t topicLen;
+		const size_t length;
 	};
 	std::list<std::string> privateTopicList;
 	std::string deviceName;
@@ -72,7 +71,7 @@ class Mqtt : public Config
 	//
 	Mqtt(EventLoop_p_t& eventLoop);
 	~Mqtt();
-	esp_err_t Init(const std::string& device="ESP32", const esp_mqtt_client_config_t& mqttCfg = mqttDefaultCfg);
+	esp_err_t Init(const std::string& device = "ESP32", const esp_mqtt_client_config_t& mqttCfg = mqttDefaultCfg);
 	void SetStationMacAddress(const uint8_t* mac_6);
 	void SetActiveApMacAddress(const uint8_t* mac_6);
 	esp_err_t Disconnect();
@@ -83,10 +82,10 @@ class Mqtt : public Config
 	void AddToSubscribeList(std::string&& topic);
 	void AddToSubscribeList(const std::string& topic);
 	esp_err_t Publish(const MqttMsg_t& msg) const;
-	esp_err_t Publish(const std::string&, const std::string&, uint8_t qos = 1, bool retained = false) const;
-	esp_err_t Publish(const char*, const char*, uint8_t qos = 1, bool retained = false) const;
-	esp_err_t Publish(const char*, const std::string&, uint8_t qos = 1, bool retained = false) const;
-	esp_err_t Publish(std::pair<std::string, std::string> data, uint8_t qos=0, bool retained=false) const;
+	esp_err_t Publish(const std::string&, const std::string&, const uint8_t qos = 1, const bool retained = false) const;
+	esp_err_t Publish(const char*, const char*,const uint8_t qos = 1, const bool retained = false) const;
+	esp_err_t Publish(const char*, const std::string&, const uint8_t qos = 1, const bool retained = false) const;
+	esp_err_t Publish(std::pair<std::string, std::string> data, const uint8_t qos = 1, const bool retained = false) const;
 	const std::string& GetTopicBase() const;
 	esp_err_t SetLastWill(const std::string& LwTopic, const std::string& lwMsg);
 	esp_err_t SetConfigurationParameters(const json& config_in) override;
@@ -95,7 +94,7 @@ class Mqtt : public Config
 	void ResetDisconnectionCounter();
 	esp_err_t GetConfiguration(json& config_out) const override;
 
-	private:
+private:
 	//CONFIG OVERRIDE
 	esp_err_t GetConfigurationStatus(json& config_out) const override;
 	esp_err_t RestoreDefault() override;

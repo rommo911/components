@@ -14,7 +14,7 @@
 
 class Blind :public Config
 {
-    public:
+public:
     enum MovingDirection_t
     {
         Direction_UP = 0,
@@ -35,17 +35,18 @@ class Blind :public Config
     bool IsBusy()const;
     static esp_err_t mqtt_callback(const std::string&, const std::string&, void*);
     std::unique_ptr<ESPTimer> timer{ nullptr };
+    std::unique_ptr<ESPTimer> timerIntr{ nullptr };
     std::string GetStatusStr()const;
-    const Event_t EVENT_BLIND_MOVING = { TAG, EventID_t(0) };
     const Event_t EVENT_BLIND_STOPPED = { TAG, EventID_t(2) };
     const Event_t EVENT_BLIND_CHNAGED = { TAG, EventID_t(3) };
     esp_err_t SetConfigurationParameters(const json& config_in) override;
     esp_err_t GetConfiguration(json& config_out) const override;
     esp_err_t SaveToNVS() override;
     bool IsIverted() { return isInverted; }
-    private:
+private:
     //CONFIG OVERRIDE
     esp_err_t RestoreDefault() override;
+    AsyncTask* Intertask{ nullptr };
     esp_err_t LoadFromNVS() override;
     EventLoop_p_t loop{ nullptr };
     SemaphorePointer_t lock;
@@ -55,6 +56,18 @@ class Blind :public Config
     bool isBusy = false;
     bool commandMode = false;
     bool isInverted = false;
+    static xQueueHandle InterruptQueue;
+    enum InterruptState_t
+    {
+        Stop = 0,
+        Up = 1,
+        Down = 2
+    } InterruptState = InterruptState_t::Stop;
     void TimerExecute();
+    void TimerExecuteIntr();
+    void EnableInterrupt(const bool val);
+    static void up_isr_handler(void* arg);
+    static void down_isr_handler(void* arg);
+    void InterruptTask();
 };
 #endif // __BLIND_H__
