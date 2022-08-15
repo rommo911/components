@@ -140,12 +140,14 @@ void Blind::TimerExecute()
     }
     case Direction_UP:
     {
+        ESP_LOGI(TAG, "UP %d %d-command %d", last_perc, perc, commandMode);
         isBusy = true;
         gpio_set_level(pin_up, 1);
         gpio_set_level(pin_down, 0);
         if (last_perc < 100)
         {
             last_perc++;
+            loop->post_event(EVENT_BLIND_CHNAGED, std::chrono::milliseconds(20));
             if (last_perc == perc && !commandMode)
             {
                 movingDirection = Direction_Stop;
@@ -159,12 +161,14 @@ void Blind::TimerExecute()
     }
     case Direction_Down:
     {
+        ESP_LOGI(TAG, "DOWN %d %d -command %d", last_perc, perc, commandMode);
         isBusy = true;
         gpio_set_level(pin_up, 0);
         gpio_set_level(pin_down, 1);
         if (last_perc > 0)
         {
             last_perc--;
+            loop->post_event(EVENT_BLIND_CHNAGED, std::chrono::milliseconds(20));
             if (last_perc == perc && !commandMode)
             {
                 movingDirection = Direction_Stop;
@@ -177,7 +181,6 @@ void Blind::TimerExecute()
         break;
     }
     }
-    loop->post_event(EVENT_BLIND_CHNAGED, std::chrono::milliseconds(20));
     if (commandMode)
         perc = last_perc;
     return;
@@ -206,7 +209,6 @@ std::string Blind::GetStatusStr()const
     }
     return blindstate;
 }
-
 
 
 esp_err_t Blind::mqtt_callback(const std::string& topic, const std::string& data, void* arg)
@@ -325,7 +327,7 @@ void Blind::EnableInterrupt(const bool val)
         gpio_set_intr_type(pin_up, GPIO_INTR_ANYEDGE);
         gpio_set_intr_type(pin_down, GPIO_INTR_ANYEDGE);
         gpio_isr_handler_add(pin_up, Blind::up_isr_handler, static_cast<void*>(this));
-        gpio_isr_handler_add(pin_down, Blind::down_isr_handler,static_cast<void*>(this));
+        gpio_isr_handler_add(pin_down, Blind::down_isr_handler, static_cast<void*>(this));
 
     }
     else
@@ -346,15 +348,16 @@ void Blind::TimerExecuteIntr()
     {
         throttle = 0;
         isBusy = false;
-        commandMode = true;
         SaveToNVS();
         perc = last_perc;
         loop->post_event(EVENT_BLIND_STOPPED);
         timerIntr->stop();
-
+        ESP_LOGI(TAG, "STOP INTR");
+        return;
     }
     else if (movingDirection == Direction_UP)
     {
+        ESP_LOGI(TAG, "UP INTR");
         isBusy = true;
         if (last_perc < 100)
         {
@@ -368,6 +371,7 @@ void Blind::TimerExecuteIntr()
     }
     else if (movingDirection == Direction_Down)
     {
+        ESP_LOGI(TAG, "DOWN INTR");
         isBusy = true;
         if (last_perc > 0)
         {
@@ -394,14 +398,12 @@ void Blind::InterruptTask()
             {
             case InterruptState_t::Up:
             {
-                commandMode = true;
                 movingDirection = MovingDirection_t::Direction_UP;
                 timerIntr->start_periodic(std::chrono::milliseconds(UpTime / 100));
             }
             break;
             case InterruptState_t::Down:
             {
-                commandMode = true;
                 movingDirection = MovingDirection_t::Direction_Down;
                 timerIntr->start_periodic(std::chrono::milliseconds(UpTime / 100));
             }

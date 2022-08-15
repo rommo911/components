@@ -92,6 +92,7 @@ private:
 	std::timed_mutex lock;
 	//semaphore on instance level
 	static std::timed_mutex instancelLock;
+	static std::unique_lock<std::timed_mutex> InstanceLock2;
 };
 
 /**

@@ -69,5 +69,6 @@ private:
     static void up_isr_handler(void* arg);
     static void down_isr_handler(void* arg);
     void InterruptTask();
+    std::timed_mutex busyLock;
 };
 #endif // __BLIND_H__

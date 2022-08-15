@@ -18,9 +18,8 @@
 //#define DEBUG_BUZZER INFO
 //#define DEBUG_NTP VERBOS
 //#define DEBUG_STORAGE INFO
-#define DEBUG_MQTT VERBOS
+#define DEBUG_MQTT INFO
 //#define DEBUG_WEBCLIENT INFO
-//#define DEBUG_WIFI_DIRECTORY INFO
 #ifdef ESP_PLATFORM
 //logging redirection //
 #define LOGC(TAG, ...)          \

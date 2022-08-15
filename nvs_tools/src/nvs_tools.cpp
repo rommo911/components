@@ -66,9 +66,13 @@ NVS::NVS(const char* name, nvs_open_mode openMode, const char* partition)
  */
 esp_err_t NVS::Init()
 {
-	const bool res_lock = instancelLock.try_lock_for(std::chrono::seconds(1)); //this will prevent multiple instances in the same time
+
+	const bool res_lock = instancelLock.try_lock_for(std::chrono::seconds(1));
 	if (!res_lock)
+	{
 		LOGE(TAG, "failed to lock instance ! ");
+		return ESP_FAIL;
+	}
 	esp_err_t ret = ESP_OK;
 	std::lock_guard<std::timed_mutex> guard(lock);
 	if (!isInitialized)
@@ -91,7 +95,7 @@ esp_err_t NVS::Init()
 	m_handle = nvs::open_nvs_handle(m_name.c_str(), m_openMode, &ret);
 	if (ret != ESP_OK)
 	{
-		LOGE(TAG, "nvs_flash handle open: %s %s",m_name.c_str(), esp_err_to_name(ret));
+		LOGE(TAG, "nvs_flash handle open: %s %s", m_name.c_str(), esp_err_to_name(ret));
 		instancelLock.unlock();
 		return ret;
 	}
@@ -225,7 +229,7 @@ esp_err_t NVS::close()
  */
 NVS::~NVS()
 {
-	if (isInitialized && open)
+	if (isInitialized && this->open)
 	{
 		close();
 	}
@@ -239,10 +243,13 @@ esp_err_t NVS::commit()
 
 	ASSERT_INIT_AND_RETURN_ERR(NVS::isInitialized, TAG)
 		AssertNull_RETURN_ERR(m_handle, TAG);
-	if (open && changed)
+	if (open && changed && m_openMode == NVS_READWRITE)
+	{
 		changed = false;
-	esp_err_t ret = m_handle->commit();
-	return ret;
+		esp_err_t ret = m_handle->commit();
+		return ret;
+	}
+	return ESP_OK;
 } // commit
 
 /**
