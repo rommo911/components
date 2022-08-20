@@ -93,7 +93,7 @@ esp_err_t NVS::Init()
 	}
 	isInitialized = true;
 	m_handle = nvs::open_nvs_handle(m_name.c_str(), m_openMode, &ret);
-	if (ret != ESP_OK)
+	if (ret != ESP_OK || m_handle == nullptr)
 	{
 		LOGE(TAG, "nvs_flash handle open: %s %s", m_name.c_str(), esp_err_to_name(ret));
 		instancelLock.unlock();
@@ -122,17 +122,15 @@ esp_err_t NVS::getS(const char* key, std::string& result, bool isBlob)
 	if (size > 0)
 	{
 		std::lock_guard<std::timed_mutex> guard(lock);
-		char* buf = (char*)malloc(size);
-		ret = m_handle->get_string(key, buf, size);
+		std::unique_ptr<char[]> buf = std::unique_ptr<char[]>(new char[size]);
+		ret = m_handle->get_string(key, buf.get(), size);
 		if (ret != ESP_OK)
 		{
 			LOGE(TAG, "%s Error getting key:%s %s", m_name.c_str(), key, esp_err_to_name(ret));
-			free(buf);
 			return ret;
 		}
-		result = std::string(buf, size);
+		result = std::string(buf.get(), size);
 		//LOGV(TAG, " %s getting key:%s=%s", m_name.c_str(), key,result.c_str());
-		free(buf);
 	}
 	return ret;
 } // set

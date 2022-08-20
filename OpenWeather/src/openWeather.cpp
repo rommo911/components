@@ -5,10 +5,10 @@
 #include "esp_log.h"
 
 #define NVS_OW_NAME_SAPCE "OPEN_WEATHER"// or °F
-#define NVS_KEY_OW_UNIT "°C"// or °F
-#define NVS_KEY_OW_API_KEY  "OW_API_KEY"
-#define NVS_KEY_OW_CITY     "OW_CITY"  
-#define NVS_KEY_OW_COUNTRY_CODE "OWCTRYCODE"
+#define NVS_KEY_OW_UNIT "ow_unit"// or °F
+#define NVS_KEY_OW_API_KEY  "ow_api"
+#define NVS_KEY_OW_CITY     "ow_city"  
+#define NVS_KEY_OW_COUNTRY_CODE "ow_cc"
 
 OpenWeather::OpenWeather(const char* _city, const char* _countryCode, const char* _unit, const char* _apiKey)
 {
@@ -53,7 +53,7 @@ using namespace nlohmann;
 esp_err_t OpenWeather::ReadConfig()
 {
     esp_err_t ret = ESP_FAIL;
-    NvsPointer nvs = OPEN_NVS(NVS_OW_NAME_SAPCE);
+    NvsPointer nvs = OPEN_NVS_DEAFULT();
     if (nvs->isOpen())
     {
         ret = nvs->getS(NVS_KEY_OW_API_KEY, this->apiKey);
@@ -68,38 +68,6 @@ esp_err_t OpenWeather::ReadConfig()
         return ESP_ERR_NOT_FOUND;
     }
     IsInitialized = ret == ESP_OK ? true : false;
-    return ret;
-}
-
-esp_err_t OpenWeather::SetConfig(const char* _apikey, const char* _city, const char* _countryCode, const char* _unit)
-{
-    esp_err_t ret = ESP_FAIL;
-    bool valid = true;
-    valid = (strlen(_apikey) > 30 && strlen(_apikey) < 35);
-    valid &= (strlen(_city) > 2 && strlen(_city) < 30);
-    valid &= (strlen(_countryCode) == 2);
-    valid &= (strlen(_unit) > 3);
-    if (valid)
-    {
-        NvsPointer nvs = OPEN_NVS_W(NVS_OW_NAME_SAPCE);
-        if (nvs->isOpen())
-        {
-            ret = nvs->setS(NVS_KEY_OW_API_KEY, _apikey);
-            ret |= nvs->setS(NVS_KEY_OW_CITY, _city);
-            ret |= nvs->setS(NVS_KEY_OW_COUNTRY_CODE, _countryCode);
-            ret |= nvs->setS(NVS_KEY_OW_UNIT, _unit);
-        }
-        else
-        {
-            ESP_LOGE(NVS_OW_NAME_SAPCE, "NVS_KEY_OW_API_KEY not found");
-            return ESP_ERR_NVS_NOT_FOUND;
-        }
-    }
-    else
-    {
-        ESP_LOGE(NVS_OW_NAME_SAPCE, "INVALID ARGS");
-        return ESP_ERR_INVALID_ARG;
-    }
     return ret;
 }
 

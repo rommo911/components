@@ -43,7 +43,7 @@ ASSERTION DEFINES
 #define AssertNull_RETURN_ERR(pointer, TAG)        \
     if (pointer == NULL)                           \
     {                                              \
-        ESP_LOGE(TAG, "Error Argument passed i null"); \
+        ESP_LOGE(TAG, "Error Argument passed is null"); \
         return ESP_FAIL;                           \
     }
 #define ASSERT_RET_WITH_MSG_RETURN_RET(ret, str) \

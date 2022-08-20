@@ -8,12 +8,11 @@ xQueueHandle Blind::InterruptQueue = NULL;
 Blind::Blind(EventLoop_p_t& _loop,
     gpio_num_t _pin_up,
     gpio_num_t _pin_down
-) : Config(TAG), loop(_loop),
+) : loop(_loop),
 pin_up(_pin_up),
 pin_down(_pin_down)
 {
     timer = std::make_unique<ESPTimer>([this](void* arg) {TimerExecute(); }, "blind");
-    InitThisConfig();
     if (this->isInverted)
         std::swap(pin_up, pin_down);
     timerIntr = std::make_unique<ESPTimer>([this](void* arg) { TimerExecuteIntr(); }, "blind2");
@@ -240,58 +239,18 @@ esp_err_t Blind::mqtt_callback(const std::string& topic, const std::string& data
     return ESP_FAIL;
 }
 
-esp_err_t Blind::SetConfigurationParameters(const json& config_in)
-{
-    esp_err_t ret = ESP_FAIL;
-    if (config_in.contains(TAG) != 0)
-    {
-        if (config_in[TAG].contains("params") != 0)
-        {
-            const auto& mqttConfig = config_in[TAG]["params"];
-            AssertjsonInt(mqttConfig, "position", last_perc, 0, 100);
-            AssertjsonInt(mqttConfig, "TimerUP", UpTime, 10000, 30000);
-            AssertjsonInt(mqttConfig, "TimerDown", DownTime, 10000, 30000);
-            AssertjsonBool(mqttConfig, "isInverted", isInverted);
-            if (isConfigured)
-            {
-                return SaveToNVS();
-            }
-            return ret;
-        }
-    }
-    return ret;
-}
-
 esp_err_t Blind::SaveToNVS()
 {
-    auto nvs = OPEN_NVS_W(this->TAG);
+    auto nvs = OPEN_NVS_W("default");
     esp_err_t ret = ESP_FAIL;
     if (nvs->isOpen())
     {
-        ret = nvs->set("position", last_perc);
-        ret |= nvs->set("TimerUP", UpTime);
-        ret |= nvs->set("TimerDown", DownTime);
-        ret |= nvs->set("isInverted", isInverted);
+        ret |= nvs->set("position", last_perc);
+        if (last_perc > 100)
+            last_perc = 100;
+        perc = last_perc;
     }
     return ret;
-}
-//CONFIG OVERRIDE
-esp_err_t Blind::GetConfiguration(json& config_out) const
-{
-    try
-    {
-        config_out[TAG]["params"] =
-        { {"position", last_perc},
-         {"TimerUP", UpTime},
-         {"TimerDown", DownTime},
-         {"isInverted", isInverted}, };
-        return ESP_OK;
-    }
-    catch (const std::exception& e)
-    {
-        ESP_LOGE(TAG, "%s", e.what());
-        return ESP_FAIL;
-    }
 }
 
 esp_err_t Blind::RestoreDefault()
@@ -303,7 +262,7 @@ esp_err_t Blind::RestoreDefault()
 }
 esp_err_t Blind::LoadFromNVS()
 {
-    auto nvs = OPEN_NVS(this->TAG);
+    auto nvs = OPEN_NVS("default");
     esp_err_t ret = ESP_FAIL;
     if (nvs->isOpen())
     {

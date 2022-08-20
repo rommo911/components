@@ -12,9 +12,9 @@
 
 #define DEFAULT_UP_DOWN_TIME_MS 15000
 
-class Blind :public Config
+class Blind
 {
-public:
+    public:
     enum MovingDirection_t
     {
         Direction_UP = 0,
@@ -39,16 +39,15 @@ public:
     std::string GetStatusStr()const;
     const Event_t EVENT_BLIND_STOPPED = { TAG, EventID_t(2) };
     const Event_t EVENT_BLIND_CHNAGED = { TAG, EventID_t(3) };
-    esp_err_t SetConfigurationParameters(const json& config_in) override;
-    esp_err_t GetConfiguration(json& config_out) const override;
-    esp_err_t SaveToNVS() override;
     bool IsIverted() { return isInverted; }
-private:
+    private:
     //CONFIG OVERRIDE
-    esp_err_t RestoreDefault() override;
-    AsyncTask* Intertask{ nullptr };
-    esp_err_t LoadFromNVS() override;
+    esp_err_t RestoreDefault();
+    esp_err_t SaveToNVS();
+    esp_err_t LoadFromNVS();
+    //
     EventLoop_p_t loop{ nullptr };
+    AsyncTask* Intertask{ nullptr };
     SemaphorePointer_t lock;
     gpio_num_t pin_up, pin_down;
     uint8_t last_perc = 0;

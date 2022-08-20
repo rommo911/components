@@ -47,12 +47,9 @@ RTC_DATA_ATTR uint8_t Mqtt::disconnectionCounter;
  * @brief Constructor , rest topic and config
  *
  */
-Mqtt::Mqtt(EventLoop_p_t& eventLoop) : Config(TAG), Loop(eventLoop)
+Mqtt::Mqtt(EventLoop_p_t& eventLoop) : Loop(eventLoop)
 {
 	privateTopicList.clear();
-	lock = Semaphore::CreateUnique(this->TAG);
-	InitThisConfig();
-
 }
 
 /**
@@ -70,14 +67,16 @@ esp_err_t Mqtt::Init(const std::string& device, const esp_mqtt_client_config_t& 
 		LOGW(TAG, " Already initialized ! OK, will retry connection automatically");
 		return ESP_ERR_INVALID_STATE;
 	}
-	MqttUserConfig.deviceStr = device;;
-	MqttUserConfig.TopicBase = MqttUserConfig.roomName + "/" + MqttUserConfig.deviceStr + "/";
+	LoadFromNVS();
 	MqttUserConfig.activeAPIConfig = mqttCfg;
-	LOG_MQTT(TAG, " MqttUserConfig.clienId = %s", MqttUserConfig.clienId.c_str());
-	LOG_MQTT(TAG, " MqttUserConfig.hostName = %s", MqttUserConfig.hostName.c_str());
-	MqttUserConfig.activeAPIConfig.host = MqttUserConfig.hostName.c_str();
-	MqttUserConfig.activeAPIConfig.client_id = MqttUserConfig.clienId.c_str();
+	uint8_t mac[6];
+	esp_efuse_mac_get_default(mac);
+	std::string clienID = tools::MacToStr(mac, 4, false);
+	MqttUserConfig.deviceStr += clienID;
+	MqttUserConfig.activeAPIConfig.host = clienID.c_str();
+	MqttUserConfig.activeAPIConfig.client_id = MqttUserConfig.deviceStr.c_str();
 	const std::string prefix = "mqtt://";
+	ESP_LOGW(TAG, "server=%s , port=%d ", MqttUserConfig.serverStr.c_str(), MqttUserConfig.port);
 	if (MqttUserConfig.serverStr.compare(0, prefix.size(), prefix) != 0)
 	{
 		MqttUserConfig.serverStr = prefix + MqttUserConfig.serverStr;
@@ -88,8 +87,6 @@ esp_err_t Mqtt::Init(const std::string& device, const esp_mqtt_client_config_t& 
 	MqttUserConfig.activeAPIConfig.lwt_msg = MqttUserConfig.lwMsg.c_str();
 	MqttUserConfig.activeAPIConfig.username = MqttUserConfig.username.c_str();
 	MqttUserConfig.activeAPIConfig.password = MqttUserConfig.password.c_str();
-	MqttUserConfig.activeAPIConfig.host = MqttUserConfig.hostName.c_str();
-	MqttUserConfig.activeAPIConfig.client_id = MqttUserConfig.clienId.c_str();
 	MqttUserConfig.clentAPIHandle = esp_mqtt_client_init(&MqttUserConfig.activeAPIConfig);
 	esp_mqtt_client_register_event(MqttUserConfig.clentAPIHandle, MQTT_EVENT_ANY, MQTTEventCallbackHandler, this);
 	LOG_MQTT(TAG, " Attempting to connect to %s:%d - user:%s , pass:%s as %s ", MqttUserConfig.activeAPIConfig.uri, MqttUserConfig.activeAPIConfig.port, MqttUserConfig.activeAPIConfig.username, MqttUserConfig.activeAPIConfig.password, MqttUserConfig.activeAPIConfig.host);
@@ -105,57 +102,13 @@ esp_err_t Mqtt::Init(const std::string& device, const esp_mqtt_client_config_t& 
 		return (ret);
 	}
 }
-const std::string& Mqtt::GetTopicBase() const
-{
-	return MqttUserConfig.TopicBase;
 
-}
-
-void Mqtt::SetStationMacAddress(const uint8_t* addr_6)
-{
-	if (addr_6 != nullptr)
-	{
-		//MqttUserConfig.TopicBase = tools::stringf("esp%02x%02x%02x%02x", addr_6[2], addr_6[3], addr_6[4], addr_6[5]);
-	}
-}
-
-void Mqtt::SetActiveApMacAddress(const uint8_t* addr_6)
-{
-	if (addr_6 != nullptr)
-	{
-		MqttUserConfig.boxBase = tools::stringf("%02x%02x%02x%02x%02x%02x", addr_6[0], addr_6[1], addr_6[2], addr_6[3], addr_6[4], addr_6[5]);
-	}
-}
-
-/**
- * @brief
- *
- * @return esp_err_t
- */
-esp_err_t Mqtt::Diagnose()
-{
-	esp_err_t ret = ESP_FAIL;
-	lock->lock("diag");
-	if (isInitialized)
-	{
-
-		if (isConnected)
-			ret = ESP_OK;
-	}
-	else
-	{
-		ret = ESP_ERR_INVALID_STATE;
-	}
-	lock->unlock();
-	return ret;
-}
 
 Mqtt::~Mqtt()
 {
 	Disconnect();
 	esp_mqtt_client_destroy(MqttUserConfig.clentAPIHandle);
 	isInitialized = false;
-	DettachThisConfig();
 }
 
 /**
@@ -179,10 +132,10 @@ esp_err_t Mqtt::Publish(const MqttMsg_t& msg) const
 	{
 		ASSERT_INIT_AND_RETURN_ERR(Mqtt::isInitialized, TAG)
 	}
-	LOG_MQTT_V(TAG, "Sending Message %s in topic %s with Qos %d , retained %d", msg.payload.c_str(), msg.topic.c_str(), msg.qos,msg.retained);
+	LOG_MQTT_V(TAG, "Sending Message %s in topic %s with Qos %d , retained %d", msg.payload.c_str(), msg.topic.c_str(), msg.qos, msg.retained);
 	char test[500] = {};
 	sprintf(test, "qos :%d retainde %d", msg.qos, msg.retained);
-	 /*ret = esp_mqtt_client_publish(MqttUserConfig.clentAPIHandle, msg.topic.c_str(), test, strlen(test), msg.qos, msg.retained);*/
+	/*ret = esp_mqtt_client_publish(MqttUserConfig.clentAPIHandle, msg.topic.c_str(), test, strlen(test), msg.qos, msg.retained);*/
 	int ret = esp_mqtt_client_publish(MqttUserConfig.clentAPIHandle, msg.topic.c_str(), msg.payload.c_str(), length, msg.qos, msg.retained);
 	if (ret == -1)
 	{
@@ -531,8 +484,6 @@ void Mqtt::DisconnectedHandler()
 	{
 		Loop->post_event_data(EVENT_FAILED_RECONNECT, disconnectionCounter);
 	}
-	NvsPointer mqtt_storage = std::make_unique<NVS>(TAG, NVS_READWRITE);
-	mqtt_storage->set("disconCounter", disconnectionCounter);
 }
 
 /**
@@ -541,8 +492,6 @@ void Mqtt::DisconnectedHandler()
  */
 void Mqtt::ResetDisconnectionCounter()
 {
-	NvsPointer mqtt_storage = std::make_unique<NVS>(TAG, NVS_READWRITE);
-	mqtt_storage->set("disconCounter", 0);
 	disconnectionCounter = 0;
 }
 
@@ -595,139 +544,21 @@ esp_err_t Mqtt::RegisterCommand(const mqtt_data_callback_describtor_t& command)
 
 //CONFIG OVERRIDE
 
-esp_err_t Mqtt::SetConfigurationParameters(const json& config_in)
-{
-	esp_err_t ret = ESP_FAIL;
-	if (config_in.contains(TAG) != false)
-	{
-		if (config_in[TAG].contains("params") != false)
-		{
-			auto mqttConfig = config_in[TAG]["params"];
-			AssertjsonInt(mqttConfig, "defaultQos", MqttUserConfig.defaultQos, 1, 3);
-			AssertjsonStr(mqttConfig, "serverStr", MqttUserConfig.serverStr, 50, 10);
-			AssertjsonInt(mqttConfig, "port", MqttUserConfig.port, 80, 120000);
-			AssertjsonStr(mqttConfig, "clienId", MqttUserConfig.clienId, 0, 1);
-			AssertjsonStr(mqttConfig, "hostName", MqttUserConfig.hostName, 0, 1);
-			AssertjsonStr(mqttConfig, "lwillTopic", MqttUserConfig.lwillTopic, 0, 5);
-			AssertjsonStr(mqttConfig, "lwMsg", MqttUserConfig.lwMsg, 0, 3);
-			AssertjsonStr(mqttConfig, "username", MqttUserConfig.username, 0, 2);
-			AssertjsonStr(mqttConfig, "password", MqttUserConfig.password, 0, 2);
-			AssertjsonStr(mqttConfig, "roomName", MqttUserConfig.roomName, 0, 2);
-			AssertjsonStr(mqttConfig, "deviceName", MqttUserConfig.deviceStr, 0, 2);
-			if (isConfigured)
-			{
-				return SaveToNVS();
-			}
-			return ret;
-		}
-	}
-	return ret;
-}
-
-esp_err_t Mqtt::GetConfiguration(json& config_out) const
-{
-	try
-	{
-		config_out[TAG]["params"] =
-		{ {"defaultQos", MqttUserConfig.defaultQos},
-		 {"serverStr", MqttUserConfig.serverStr.c_str()},
-		 {"port", MqttUserConfig.port},
-		 {"clienId", MqttUserConfig.clienId.c_str()},
-		 {"hostName", MqttUserConfig.hostName.c_str()},
-		 {"lwillTopic", MqttUserConfig.lwillTopic.c_str()},
-		 {"lwMsg", MqttUserConfig.lwMsg.c_str()},
-		 {"roomName", MqttUserConfig.roomName.c_str()},
-		 {"deviceName", MqttUserConfig.deviceStr.c_str()},
-		 {"username", MqttUserConfig.username.c_str()},
-		 {"password", MqttUserConfig.password.c_str()} };
-		return ESP_OK;
-	}
-	catch (const std::exception& e)
-	{
-		ESP_LOGE(TAG, "%s", e.what());
-		return ESP_FAIL;
-	}
-}
-
-esp_err_t Mqtt::GetConfigurationStatus(json& config_out) const
-{
-	try
-	{
-		config_out[TAG]["status"] = {
-			{"isConfigured", isConfigured},
-			{"isconnected", IsConnected()} };
-		return ESP_OK;
-	}
-	catch (const std::exception& e)
-	{
-		ESP_LOGE(TAG, "%s", e.what());
-		return ESP_FAIL;
-	}
-}
-
-esp_err_t Mqtt::RestoreDefault()
-{
-	ESP_LOGW(TAG, "failed to configure, restoring default ");
-	MqttUserConfig.defaultQos = 1;
-	MqttUserConfig.serverStr = mqttDefaultCfg.uri;
-	MqttUserConfig.port = mqttDefaultCfg.port;
-	MqttUserConfig.lwillTopic = mqttDefaultCfg.lwt_topic;
-	MqttUserConfig.lwMsg = mqttDefaultCfg.lwt_msg;
-	MqttUserConfig.username = mqttDefaultCfg.username;
-	MqttUserConfig.password = mqttDefaultCfg.password;
-	isConfigured = false;
-	SaveToNVS();
-	esp_err_t ret = ESP_FAIL;
-	return ret;
-}
-
 esp_err_t Mqtt::LoadFromNVS()
 {
-	NvsPointer nvs = OPEN_NVS(this->TAG);
+	NvsPointer nvs = OPEN_NVS_DEAFULT();
 	esp_err_t ret = ESP_FAIL;
 	if (nvs->isOpen())
 	{
-		lock->lock("load");
-		ret = nvs->get("defaultQos", MqttUserConfig.defaultQos);
 		ret |= nvs->getS("deviceName", MqttUserConfig.deviceStr);
-		ret |= nvs->getS("serverStr", MqttUserConfig.serverStr);
-		ret |= nvs->get("port", MqttUserConfig.port);
-		ret |= nvs->getS("lwillTopic", MqttUserConfig.lwillTopic);
-		ret |= nvs->getS("lwMsg", MqttUserConfig.lwMsg);
-		ret |= nvs->getS("username", MqttUserConfig.username);
-		ret |= nvs->getS("password", MqttUserConfig.password);
-		ret |= nvs->get("isConfigured", isConfigured);
-		ret |= nvs->getS("roomName", MqttUserConfig.roomName);
-		ret |= nvs->getS("hostName", MqttUserConfig.hostName);
-		ret |= nvs->getS("clienId", MqttUserConfig.clienId);
-		LOGW(TAG, "load: %s exist ", esp_err_to_name(ret));
-		lock->unlock();
+		ret |= nvs->getS("mqtt_server", MqttUserConfig.serverStr);
+		ret |= nvs->get("mqtt_port", MqttUserConfig.port);
+		ret |= nvs->getS("mqtt_user", MqttUserConfig.username);
+		ret |= nvs->getS("mqtt_pass", MqttUserConfig.password);
+		ret |= nvs->getS("room", MqttUserConfig.roomName);
+		ESP_LOGI(TAG, "%s  %s  %d  %s  %s  %s ", MqttUserConfig.deviceStr.c_str(), MqttUserConfig.serverStr.c_str(), MqttUserConfig.port, MqttUserConfig.username.c_str(), MqttUserConfig.password.c_str(), MqttUserConfig.roomName.c_str());
 	}
 	return ret;
 }
 
-esp_err_t Mqtt::SaveToNVS()
-{
-	NvsPointer nvs = OPEN_NVS_W(this->TAG);
-	esp_err_t ret = ESP_FAIL;
-	if (nvs->isOpen())
-	{
-		lock->lock("save");
-		ret = nvs->set("defaultQos", MqttUserConfig.defaultQos);
-		ret |= nvs->setS("deviceName", MqttUserConfig.deviceStr);
-		ret |= nvs->setS("serverStr", MqttUserConfig.serverStr.c_str());
-		ret |= nvs->set("port", MqttUserConfig.port);
-		ret |= nvs->setS("lwillTopic", MqttUserConfig.lwillTopic.c_str());
-		ret |= nvs->setS("lwMsg", MqttUserConfig.lwMsg.c_str());
-		ret |= nvs->setS("username", MqttUserConfig.username.c_str());
-		ret |= nvs->setS("password", MqttUserConfig.password.c_str());
-		ret |= nvs->set("isConfigured", isConfigured);
-		ret |= nvs->setS("roomName", MqttUserConfig.roomName);
-		ret |= nvs->setS("hostName", MqttUserConfig.hostName);
-		ret |= nvs->setS("clienId", MqttUserConfig.clienId);
-		lock->unlock();
-	}
-
-	return ret;
-}
 std::shared_ptr<Mqtt> MqttDOL = nullptr;

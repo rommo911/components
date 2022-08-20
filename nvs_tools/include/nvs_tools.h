@@ -31,13 +31,13 @@
   */
 class NVS
 {
-protected:
+	protected:
 	static constexpr char TAG[] = "NVS_CPP";
 
-public:
+	public:
 	//constructo, will set namespace and open mode
-	NVS(const std::string& name, nvs_open_mode openMode = NVS_READONLY, const std::string& partition = "nvs");
-	NVS(const char* name, nvs_open_mode openMode = NVS_READONLY, const char* partition = "nvs");
+	NVS(const std::string& name = "default", nvs_open_mode openMode = NVS_READONLY, const std::string& partition = "nvs");
+	NVS(const char* name , nvs_open_mode openMode = NVS_READONLY, const char* partition = "nvs");
 	//open the nvs handle
 	esp_err_t Init();
 	// commit(save changes) and close (deinit)
@@ -75,7 +75,7 @@ public:
 		return open;
 	}
 
-private:
+	private:
 	//this is to asser init_nvs() function (ESPglobal nvs block)
 	static bool isInitialized;
 	//changes where made, commit will apply
@@ -149,6 +149,9 @@ esp_err_t NVS::set(const char* key, const T& data)
 }
 
 using NvsPointer = std::unique_ptr<NVS>;
+#define OPEN_NVS_DEAFULT() std::make_unique<NVS>("default")
 #define OPEN_NVS(tag) std::make_unique<NVS>(tag)
 #define OPEN_NVS_W(tag) std::make_unique<NVS>(tag, NVS_READWRITE)
+#define OPEN_NVS_DEAFULT_W() std::make_unique<NVS>("default", NVS_READWRITE)
+
 #endif /* COMPONENTS_CPP_UTILS_CPPNVS_H_ */

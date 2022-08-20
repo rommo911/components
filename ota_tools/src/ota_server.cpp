@@ -190,6 +190,7 @@ esp_err_t OTA_Server::Do_OTA()
         else if (recv_len < 0)
         {
             ESP_LOGE(TAG, "Error: recv data error! errno=%d", errno);
+            break;
         }
         vTaskDelay(pdMS_TO_TICKS(5));
         ESP_LOGI(TAG, " recieved %d", content_received);

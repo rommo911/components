@@ -26,16 +26,16 @@
 class Mqtt;
 extern std::shared_ptr<Mqtt> MqttDOL;
 
-class Mqtt : public Config
+class Mqtt
 {
-private:
+	private:
 	EventLoop_p_t Loop;
 	struct MqttUserConfig_t
 	{
 		std::string serverStr, clienId, hostName, lwillTopic, lwMsg, username, password, TopicBase, boxBase, roomName;
 		const uint8_t MAX_TOPIC_LENGHT = 60;
-		uint32_t port = 443;
-		std::string deviceStr = ("rami");
+		int port = 443;
+		std::string deviceStr = ("esp");
 		uint8_t defaultQos = 1;
 		esp_mqtt_client_handle_t clentAPIHandle;
 		esp_mqtt_client_config_t activeAPIConfig;
@@ -46,9 +46,8 @@ private:
 	bool isConnected = false;
 	RTC_DATA_ATTR static uint8_t disconnectionCounter;
 	std::vector<mqtt_data_callback_describtor_t> mqttRegisteredCommands;
-	SemaphorePointer_t lock;
 
-public:
+	public:
 	static constexpr char TAG[] = "Mqtt-DOL";
 	struct MqttMsg_t
 	{
@@ -83,23 +82,18 @@ public:
 	void AddToSubscribeList(const std::string& topic);
 	esp_err_t Publish(const MqttMsg_t& msg) const;
 	esp_err_t Publish(const std::string&, const std::string&, const uint8_t qos = 1, const bool retained = false) const;
-	esp_err_t Publish(const char*, const char*,const uint8_t qos = 1, const bool retained = false) const;
+	esp_err_t Publish(const char*, const char*, const uint8_t qos = 1, const bool retained = false) const;
 	esp_err_t Publish(const char*, const std::string&, const uint8_t qos = 1, const bool retained = false) const;
 	esp_err_t Publish(std::pair<std::string, std::string> data, const uint8_t qos = 1, const bool retained = false) const;
 	const std::string& GetTopicBase() const;
 	esp_err_t SetLastWill(const std::string& LwTopic, const std::string& lwMsg);
-	esp_err_t SetConfigurationParameters(const json& config_in) override;
-	esp_err_t SaveToNVS() override;
 	esp_err_t RegisterCommand(const mqtt_data_callback_describtor_t& command);
 	void ResetDisconnectionCounter();
-	esp_err_t GetConfiguration(json& config_out) const override;
 
-private:
+	private:
 	//CONFIG OVERRIDE
-	esp_err_t GetConfigurationStatus(json& config_out) const override;
-	esp_err_t RestoreDefault() override;
-	esp_err_t LoadFromNVS() override;
-	esp_err_t Diagnose();
+	esp_err_t RestoreDefault();
+	esp_err_t LoadFromNVS();
 	//Handlers // non-static
 	void ErrorHandler(esp_mqtt_error_codes_t);
 	void ConnectedHandler();
@@ -115,6 +109,7 @@ private:
 		.host = CONFIG_MQTT_DEFAULT_HOSTNAME,			//"4xdfgd", /*!< MQTT server domain (ipv4 as string) */
 		.uri = "mqtt://192.168.1.62",					/*< Complete MQTT broker URI */
 		.port = 1800,									/*< MQTT server port  SSL 443 TCP 1883 */
+		.set_null_client_id = false,
 		.client_id = "ESP32",							/*!< default client id is ``ESP32_%CHIPID%`` where %CHIPID% are last 3 bytes of MAC address in hex format */
 		.username = "",									/*!< MQTT username */
 		.password = "",									/*!< MQTT password */
