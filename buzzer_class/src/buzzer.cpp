@@ -169,7 +169,6 @@ bool Buzzer::IsBuzzing()
  */
 void Buzzer::run(void* arg)
 {
-	this->ctlLock->lock("run");
 	isBuzzing = true;
 	do
 	{
@@ -187,7 +186,6 @@ void Buzzer::run(void* arg)
 	_ledcTimer.freq_hz = configuration.frequency[0];
 	ledc_timer_config(&_ledcTimer);
 	ledc_set_duty_and_update(ledcChannel.speed_mode, ledcChannel.channel, 0, 0);
-	this->ctlLock->unlock();
 }
 
 /**

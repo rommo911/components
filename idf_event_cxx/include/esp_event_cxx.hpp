@@ -25,7 +25,7 @@
 #else
 #include "FreeRTOS.h"
 #include "queue.h"
-typedef const char* esp_event_base_t; /**< unique pointer to a subsystem that exposes events */
+typedef const char *esp_event_base_t; /**< unique pointer to a subsystem that exposes events */
 #endif
 
 #include <atomic>
@@ -41,7 +41,7 @@ typedef const char* esp_event_base_t; /**< unique pointer to a subsystem that ex
 
 #include "esp_event_api.hpp"
 #include "esp_exception.hpp"
-#include "esp_timer.h"
+
 namespace idf
 {
        namespace event
@@ -78,17 +78,11 @@ namespace idf
               {
               public:
                      ESPEventID() : id(0) {}
-                     explicit ESPEventID(int32_t event_id) : id(event_id) {}
+                     explicit constexpr ESPEventID(int32_t event_id) : id(event_id) {}
 
-                     inline bool operator==(const ESPEventID& rhs) const
+                     inline bool operator==(const ESPEventID &rhs) const
                      {
                             return id == rhs.get_id();
-                     }
-
-                     inline ESPEventID& operator=(const ESPEventID& other)
-                     {
-                            id = other.id;
-                            return *this;
                      }
 
                      inline int32_t get_id() const
@@ -96,13 +90,13 @@ namespace idf
                             return id;
                      }
 
-                     friend std::ostream& operator<<(std::ostream& os, const ESPEventID& id);
+                     friend std::ostream &operator<<(std::ostream &os, const ESPEventID &id);
 
               private:
-                     int32_t id;
+                     const int32_t id;
               };
 
-              inline std::ostream& operator<<(std::ostream& os, const ESPEventID& id)
+              inline std::ostream &operator<<(std::ostream &os, const ESPEventID &id)
               {
                      os << id.id;
                      return os;
@@ -113,13 +107,11 @@ namespace idf
                */
               struct ESPEvent
               {
-                     ESPEvent()
-                            : base(nullptr), id() {}
-                     ESPEvent(esp_event_base_t event_base, const ESPEventID& event_id)
-                            : base(event_base), id(event_id) {}
-
-                     esp_event_base_t base;
-                     ESPEventID id;
+                     constexpr ESPEvent(esp_event_base_t event_base, const ESPEventID &event_id)
+                         : base(event_base), id(event_id) {}
+                     ESPEvent() = delete;
+                     const esp_event_base_t base;
+                     const ESPEventID id;
               };
 
               /**
@@ -127,10 +119,10 @@ namespace idf
                */
               struct ESPEventRegisterException : public EventException
               {
-                     ESPEventRegisterException(esp_err_t err, const ESPEvent& event)
-                            : EventException(err), esp_event(event) {}
+                     ESPEventRegisterException(esp_err_t err, const ESPEvent &event)
+                         : EventException(err), esp_event(event) {}
 
-                     const char* what() const noexcept
+                     const char *what() const noexcept
                      {
                             std::string ret_message = "Event base: " + std::string(esp_event.base) + ", Event ID: " + std::to_string(esp_event.id.get_id());
                             return ret_message.c_str();
@@ -139,15 +131,15 @@ namespace idf
                      const ESPEvent esp_event;
               };
 
-              inline bool operator==(const ESPEvent& lhs, const ESPEvent& rhs)
+              inline bool operator==(const ESPEvent &lhs, const ESPEvent &rhs)
               {
                      return lhs.base == rhs.base && lhs.id == rhs.id;
               }
               template <typename r, typename p>
-              static TickType_t convert_duration_to_ticks(const std::chrono::duration<r, p>& time)
+              static TickType_t convert_duration_to_ticks(const std::chrono::duration<r, p> &time)
               {
-                     const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(time).count();
-                     return (TickType_t)(ms / portTICK_PERIOD_MS);
+                     const TickType_t ticks = std::chrono::duration_cast<std::chrono::milliseconds>(time).count() / portTICK_PERIOD_MS;
+                     return (ticks);
               }
 
               /**
@@ -167,9 +159,20 @@ namespace idf
                       * @param ev The event for which the handler is registered.
                       * @param api The esp event api implementation.
                       */
-                     ESPEventReg(std::function<void(const ESPEvent&, void*)> cb,
-                            const ESPEvent& ev,
-                            std::shared_ptr<ESPEventAPI> api);
+                     ESPEventReg(std::function<void(const ESPEvent &, void *)> cb,
+                                 const ESPEvent &ev,
+                                 std::shared_ptr<ESPEventAPI> api);
+                     /**
+                      * @brief Destroy the ESPEventReg::ESPEventReg object
+                      *
+                      * @param cb Register the event handler \c cb to handle the events defined by \c ev.
+                      * @param ev
+                      * @param api
+                      */
+                     ESPEventReg(std::function<void()> cb,
+                                 const ESPEvent &ev,
+                                 std::shared_ptr<ESPEventAPI> api);
+                     ESPEventReg() = delete;
 
                      /**
                       * Unregister the event handler.
@@ -180,21 +183,21 @@ namespace idf
                      /**
                       * This is esp_event's handler, all events registered go through this.
                       */
-                     static void event_handler_hook(void* handler_arg,
-                            esp_event_base_t event_base,
-                            int32_t event_id,
-                            void* event_data);
+                     static void event_handler_hook(void *handler_arg,
+                                                    esp_event_base_t event_base,
+                                                    int32_t event_id,
+                                                    void *event_data);
 
                      /**
                       * User event handler.
                       */
-                     std::function<void(const ESPEvent&, void*)> cb;
-
+                     std::function<void(const ESPEvent &, void *)> cb{nullptr};
+                     std::function<void()> cb_no_arg{nullptr};
                      /**
                       * Helper function to enter the instance's scope from the generic \c event_handler_hook().
                       */
-                     virtual void dispatch_event_handling(ESPEvent event, void* event_data);
-
+                     virtual void dispatch_event_handling(ESPEvent event, void *event_data);
+                     virtual void dispatch_event_handling_no_arg();
                      /**
                       * Save the event here to be able to un-register from the event loop on destruction.
                       */
@@ -240,11 +243,11 @@ namespace idf
                       * @param timeout The timeout in microseconds.
                       * @param api The esp event api implementation.
                       */
-                     ESPEventRegTimed(std::function<void(const ESPEvent&, void*)> cb,
-                            const ESPEvent& ev,
-                            std::function<void(const ESPEvent&)> timeout_cb,
-                            const std::chrono::microseconds& timeout,
-                            std::shared_ptr<ESPEventAPI> api);
+                     ESPEventRegTimed(std::function<void(const ESPEvent &, void *)> cb,
+                                      const ESPEvent &ev,
+                                      std::function<void(const ESPEvent &)> timeout_cb,
+                                      const std::chrono::microseconds &timeout,
+                                      std::shared_ptr<ESPEventAPI> api);
 
                      /**
                       * Unregister the event handler, stop and delete the timer.
@@ -255,17 +258,17 @@ namespace idf
                      /**
                       * Helper function to hook directly into esp timer callback.
                       */
-                     static void timer_cb_hook(void* arg);
+                     static void timer_cb_hook(void *arg);
 
                      /**
                       * Helper function to enter the instance's scope from the generic \c event_handler_hook().
                       */
-                     void dispatch_event_handling(ESPEvent event, void* event_data) override;
+                     void dispatch_event_handling(ESPEvent event, void *event_data) override;
 
                      /**
                       * The timer callback which will be called on timeout.
                       */
-                     std::function<void(const ESPEvent&)> timeout_cb;
+                     std::function<void(const ESPEvent &)> timeout_cb;
 
                      /**
                       * Timer used for event timeouts.
@@ -306,8 +309,16 @@ namespace idf
                       * @note registering the same event twice will result in unregistering the earlier registered handler.
                       * @note may throw EventException, ESPEventRegisterException
                       */
-                     std::unique_ptr<ESPEventReg> register_event(const ESPEvent& event,
-                            std::function<void(const ESPEvent&, void*)> cb);
+                     std::unique_ptr<ESPEventReg> register_event(const ESPEvent &event,
+                                                                 std::function<void(const ESPEvent &, void *)> cb);
+                     /**
+                      * @brief
+                      *
+                      * @param event
+                      * @param cb
+                      * @return unique_ptr<ESPEventReg>
+                      */
+                     std::unique_ptr<ESPEventReg> register_event(const ESPEvent &event, std::function<void()> cb);
 
                      /**
                       * Sets a timeout for event. If the specified event isn't received within timeout,
@@ -319,10 +330,10 @@ namespace idf
                       */
 #ifdef ESP_PLATFORM
 
-                     std::unique_ptr<ESPEventRegTimed> register_event_timed(const ESPEvent& event,
-                            std::function<void(const ESPEvent&, void*)> cb,
-                            const std::chrono::microseconds& timeout,
-                            std::function<void(const ESPEvent&)> timer_cb);
+                     std::unique_ptr<ESPEventRegTimed> register_event_timed(const ESPEvent &event,
+                                                                            std::function<void(const ESPEvent &, void *)> cb,
+                                                                            const std::chrono::microseconds &timeout,
+                                                                            std::function<void(const ESPEvent &)> timer_cb);
 #endif
                      /**
                       * Posts an event and corresponding data.
@@ -333,12 +344,15 @@ namespace idf
                       * @param wait_time the maximum wait time the function tries to post the event
                       */
                      template <typename T>
-                     void post_event_data(const ESPEvent& event,
-                            T& event_data,
-                            const std::chrono::milliseconds& wait_time = std::chrono::milliseconds(500));
+                     esp_err_t post_event_data(const ESPEvent &event,
+                                               const T &event_data,
+                                               const std::chrono::milliseconds &wait_time = std::chrono::milliseconds(500));
+                     esp_err_t post_event_data_p(const ESPEvent &event,
+                                                 void *event_data,
+                                                 const std::chrono::milliseconds &wait_time = std::chrono::milliseconds(500));
                      template <typename T>
-                     void post_event_data_from_isr(const ESPEvent& event,
-                            T& event_data);
+                     esp_err_t post_event_data_from_isr(const ESPEvent &event,
+                                                        T &event_data);
 
                      /**
                       * Posts an event.
@@ -348,9 +362,9 @@ namespace idf
                       * @param event the event to post
                       * @param wait_time the maximum wait time the function tries to post the event
                       */
-                     void post_event(const ESPEvent& event,
-                            const std::chrono::milliseconds& wait_time = MIN_TIMEOUT);
-                     void IRAM_ATTR post_event_from_isr(const ESPEvent& event) noexcept;
+                     esp_err_t post_event(const ESPEvent &event,
+                                          const std::chrono::milliseconds &wait_time = MIN_TIMEOUT);
+                     esp_err_t IRAM_ATTR post_event_from_isr(const ESPEvent &event) noexcept;
 
               private:
                      /**
@@ -376,10 +390,10 @@ namespace idf
                       */
                      struct EventResult
                      {
-                            EventResult() : event(), ev_data(nullptr) {}
-                            EventResult(ESPEvent ev, void* ev_data) : event(ev), ev_data(ev_data) {}
+                            EventResult() : event((esp_event_base_t)NULL, ESPEventID(0)), ev_data(nullptr) {}
+                            EventResult(ESPEvent ev, void *ev_data) : event(ev), ev_data(ev_data) {}
                             ESPEvent event;
-                            void* ev_data;
+                            void *ev_data;
                      };
 
                      /**
@@ -388,7 +402,7 @@ namespace idf
                      struct EventResultTimed : public EventResult
                      {
                             EventResultTimed(EventResult event_result, bool timeout_arg)
-                                   : EventResult(event_result), timeout(timeout_arg) {}
+                                : EventResult(event_result), timeout(timeout_arg) {}
                             bool timeout;
                      };
 
@@ -402,11 +416,11 @@ namespace idf
                       * @param queue_send_timeout The timeout for posting events to the internal queue
                       */
                      ESPEventHandlerSync(std::shared_ptr<ESPEventLoop> event_loop,
-                            size_t queue_max_size = 1,
-                            TickType_t queue_send_timeout = pdMS_TO_TICKS(2));
-                     ESPEventHandlerSync(std::shared_ptr<ESPEventLoop> event_loop, const ESPEvent& event,
-                            size_t queue_max_size = 1,
-                            TickType_t queue_send_timeout = pdMS_TO_TICKS(2));
+                                         size_t queue_max_size = 1,
+                                         TickType_t queue_send_timeout = pdMS_TO_TICKS(2));
+                     ESPEventHandlerSync(std::shared_ptr<ESPEventLoop> event_loop, const ESPEvent &event,
+                                         size_t queue_max_size = 1,
+                                         TickType_t queue_send_timeout = pdMS_TO_TICKS(2));
 
                      /**sync
                       * Unregister all formerly registered events via automatic destruction in registry.
@@ -429,14 +443,17 @@ namespace idf
                       * Throws EventTimeout in case of a timeout.
                       */
                      template <typename r, typename p>
-                     EventResultTimed wait_event_for(const std::chrono::duration<r, p>& _period)
+                     EventResultTimed wait_event_for(const std::chrono::duration<r, p> &_period)
                      {
                             EventResult event_result;
-                            auto waitTicks = convert_duration_to_ticks(std::chrono::duration_cast<std::chrono::milliseconds>(_period));
-                            BaseType_t result = xQueueReceive(event_queue, &event_result, waitTicks);
-
-                            EventResultTimed event_result_timed(event_result, result != pdTRUE);
-                            return event_result_timed;
+                            if (init)
+                            {
+                                   TickType_t waitTicks = convert_duration_to_ticks((_period));
+                                   BaseType_t result = xQueueReceive(event_queue, &event_result, waitTicks);
+                                   EventResultTimed event_result_timed(event_result, result != pdTRUE);
+                                   return event_result_timed;
+                            }
+                            return EventResultTimed(event_result, true);
                      }
 
                      /**
@@ -444,7 +461,7 @@ namespace idf
                       *
                       * @note this will unregister all earlier registered events of the same event type from the event loop.
                       */
-                     void listen_to(const ESPEvent& event);
+                     void listen_to(const ESPEvent &event);
 
                      /**
                       * Indicates whether there were errors inserting an event into the queue.
@@ -457,7 +474,7 @@ namespace idf
                      /**
                       * Posts an event to the internal queue.
                       */
-                     void post_event(const EventResult& result);
+                     void post_event(const EventResult &result);
 
               private:
                      /**
@@ -479,7 +496,7 @@ namespace idf
                      /**
                       * The event loop used for this synchronous event handling class.
                       */
-                     std::shared_ptr<ESPEventLoop>& event_loop;
+                     std::shared_ptr<ESPEventLoop> &event_loop;
 
                      /**
                       * Keeps track of all events which are registered already for synchronous handling.
@@ -487,35 +504,38 @@ namespace idf
                       * This is necessary to keep the registration.
                       */
                      std::vector<std::shared_ptr<ESPEventReg>> registry;
+                     bool init = false;
               };
 
               template <typename T>
-              void ESPEventLoop::post_event_data(const ESPEvent& event,
-                     T& event_data,
-                     const std::chrono::milliseconds& wait_time)
+              esp_err_t ESPEventLoop::post_event_data(const ESPEvent &event,
+                                                      const T &event_data,
+                                                      const std::chrono::milliseconds &wait_time)
               {
-                     std::lock_guard<std::mutex> autolock(lock);
+                     std::lock_guard autolock(lock);
                      esp_err_t result = api->post(event.base,
-                            event.id.get_id(),
-                            (void*)&event_data,
-                            sizeof(event_data),
-                            convert_duration_to_ticks(wait_time));
+                                                  event.id.get_id(),
+                                                  (void *)&event_data,
+                                                  sizeof(event_data),
+                                                  convert_duration_to_ticks(wait_time));
 
                      if (result != ESP_OK)
                      {
-                            ESP_LOGE("EVENT DATA FAILED", " %s %s : %d ", esp_err_to_name(result), (const char*)event.base, event.id.get_id());
+                            ESP_LOGE("EVENT DATA FAILED", "%s : %d ", (const char *)event.base, event.id.get_id());
                             // throw ESPException(result);
                      }
+                     return result;
               }
-#ifdef ISR
+
+#ifdef CONFIG_ESP_EVENT_POST_FROM_ISR
               template <typename T>
-              void ESPEventLoop::post_event_data_from_isr(const ESPEvent& event,
-                     T& event_data)
+              esp_err_t ESPEventLoop::post_event_data_from_isr(const ESPEvent &event,
+                                                               T &event_data)
               {
-                     esp_err_t result = api->post_from_isr(event.base,
-                            event.id.get_id(),
-                            &event_data,
-                            sizeof(event_data));
+                     return api->post_from_isr(event.base,
+                                               event.id.get_id(),
+                                               &event_data,
+                                               sizeof(event_data));
               }
 #endif
        } // namespace event

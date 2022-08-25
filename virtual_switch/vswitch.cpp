@@ -6,12 +6,10 @@
 
 vswitch_t::vswitch_t(const std::string& _name) : Config(TAG), name(_name)
 {
-    InitThisConfig();
 }
 
 vswitch_t::~vswitch_t()
 {
-    this->DettachThisConfig();
 }
 
 
@@ -47,7 +45,7 @@ esp_err_t vswitch_t::SetConfigurationParameters(const json& config_in)
         if (config_in[TAG].contains("params") != 0)
         {
             const auto& cfg = config_in[TAG]["params"];
-            AssertjsonBool(cfg, "status", status);
+            AssertJsonBool(cfg, "status", status);
             if (isConfigured)
             {
                 return SaveToNVS();

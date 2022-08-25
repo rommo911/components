@@ -44,7 +44,7 @@ void Rotary::setup(gpio_num_t rot_pin1, gpio_num_t rot_pin2, gpio_num_t pin1, in
     rotary_encoder_add(&re);
     Rotarychanged = false;
     Rotaryposition = pos;
-    sleepTimer = std::make_unique<ESPTimer>([this](void* arg) {rotary_encoder_suspend(&re);}, "suspend rotary");
+    sleepTimer = std::make_unique<ESPTimer>("suspend rotary",[this]() {rotary_encoder_suspend(&re);});
     StartTask(this);
 }
 

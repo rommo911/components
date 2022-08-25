@@ -5,4 +5,4 @@ idf_component_register(SRC_DIRS "src"
                     idf_event_cxx
 					debug_tools
 					nlohmann_json
-                    PRIV_REQUIRES  bootloader_support app_update libsodium nvs_tools)
+                    PRIV_REQUIRES  bootloader_support app_update libsodium nvs_tools pthread)

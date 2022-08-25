@@ -21,7 +21,7 @@
 #include <functional>
 #include "esp_log.h"
 
-ESPTimer::ESPTimer(std::function<void(void* arg)> timeout_cb, const std::string& timer_name)
+ESPTimer::ESPTimer(std::function<void()> timeout_cb, const std::string& timer_name)
     : timeout_cb(timeout_cb), name(timer_name)
 {
     esp_timer_create_args_t timer_args = {};
@@ -29,7 +29,22 @@ ESPTimer::ESPTimer(std::function<void(void* arg)> timeout_cb, const std::string&
     timer_args.arg = this;
     timer_args.dispatch_method = ESP_TIMER_TASK;
     timer_args.name = name.c_str();
-    esp_timer_create(&timer_args, &timer_handle);
+    this->init = esp_timer_create(&timer_args, &timer_handle) == ESP_OK ? true : false;
+}
+
+ESPTimer::ESPTimer(const std::string& timer_name, std::function<void()> timeout_cb) : timeout_cb(timeout_cb), name(timer_name)
+{
+    esp_timer_create_args_t timer_args = {};
+    timer_args.callback = esp_timer_cb;
+    timer_args.arg = this;
+    timer_args.dispatch_method = ESP_TIMER_TASK;
+    timer_args.name = name.c_str();
+    this->init = esp_timer_create(&timer_args, &timer_handle) == ESP_OK ? true : false;
+}
+
+
+ESPTimer::ESPTimer(const std::string& timer_name) : name(timer_name)
+{
 }
 
 ESPTimer::~ESPTimer()
@@ -40,28 +55,32 @@ ESPTimer::~ESPTimer()
 }
 
 /**
-    * @brief Set the Callback function
-    *
-    * @param _timeout_cb
-    */
-void ESPTimer::setCallback(std::function<void(void*)> _timeout_cb) noexcept
+ * @brief Set the Callback function
+ *
+ * @param _timeout_cb
+ */
+void ESPTimer::setCallback(std::function<void()> _timeout_cb) noexcept
 {
     if (_timeout_cb != nullptr && this->currentType == NONE)
     {
+        if (this->timer_handle != nullptr)
+        {
+            esp_timer_stop(timer_handle);
+            esp_timer_delete(timer_handle);
+        }
         this->timeout_cb = _timeout_cb;
+        esp_timer_create_args_t timer_args = {};
+        timer_args.callback = esp_timer_cb;
+        timer_args.arg = this;
+        timer_args.dispatch_method = ESP_TIMER_TASK;
+        timer_args.name = name.c_str();
+        this->init = esp_timer_create(&timer_args, &timer_handle) == ESP_OK ? true : false;
     }
 }
 
-/**
-    * @brief Stop the previously started timer.
-    *
-    * This function stops the timer previously started using \c start() or \c start_periodic().
-    *
-    * @throws ESPException with error ESP_ERR_INVALID_STATE if the timer has not been started yet.
-    */
 esp_err_t ESPTimer::stop() noexcept
 {
-    std::lock_guard<std::mutex> guard(lock);
+    std::unique_lock guard(lock);
     esp_err_t ret = currentType == NONE ? ESP_OK : esp_timer_stop(timer_handle);
     if (ret == ESP_OK)
     {
@@ -70,52 +89,31 @@ esp_err_t ESPTimer::stop() noexcept
     return ret;
 }
 
-/**
- * @brief Start periodic timer
- *
- * Timer could be running or not when this function is called. This function will
- * stop a timer, and restart it which will trigger every 'period' microseconds.
- *
- *
- * @param arg
- *  @return esp_err_t
- */
-esp_err_t ESPTimer::reset_periodic(void* arg)
+esp_err_t ESPTimer::reset_periodic()
 {
-    if (timeout_cb == nullptr)
+    if (timeout_cb == nullptr || !init)
     {
         return ESP_ERR_INVALID_STATE;
     }
     if (stop() == ESP_OK)
     {
-        if (arg != nullptr)
-        {
-            m_arg = arg;
-        }
-        return start_periodic(this->period, m_arg);
+        return start_periodic(this->period);
     }
     return ESP_FAIL;
 }
 
-/**
- * @brief Timer could be running or not when this function is called. This function will
- * stop a timer if was not yet triggered, and restart it which will triggerd once in a 'period' microseconds.
- *
- * @param arg
- * @return esp_err_t
- */
-esp_err_t ESPTimer::reset_once(void* arg) {
+esp_err_t ESPTimer::reset_once()
+{
+    if (timeout_cb == nullptr || !init)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
     if (stop() == ESP_OK)
     {
-        if (arg != nullptr)
-        {
-            m_arg = arg;
-        }
-        return start_once(this->period, this->m_arg);
+        return start_once(this->period);
     }
     return ESP_FAIL;
 }
-
 
 void ESPTimer::esp_timer_cb(void* arg)
 {
@@ -123,7 +121,7 @@ void ESPTimer::esp_timer_cb(void* arg)
     if (timer->timeout_cb != nullptr)
     {
         ESP_LOGV(timer->name.c_str(), "Timer EXPIRED, executing cb");
-        timer->timeout_cb(timer->m_arg);
+        timer->timeout_cb();
     }
     if (timer->currentType == ONCE)
     {

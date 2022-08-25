@@ -36,6 +36,7 @@ private:
 	TaskStatus_t m_pxTaskStatus = {};
 	bool debug;
 	static void DumpRunningTasks();
+	std::function<void(void *)> mainRunFunction{nullptr};
 
 public:
 	Task(const char *taskName = "Task", uint16_t stackSize = CONFIG_TASK_DEFAULT_STACK, uint8_t priority = CONFIG_TASK_DEFAULT_PRIORITY, BaseType_t core_id = tskNO_AFFINITY, bool _debug = false);
@@ -47,27 +48,30 @@ public:
 	static std::string GetRunningTasks();
 	static void print_this_task_info();
 	static std::string GetRunTimeStats();
+	esp_err_t SetRunTask(std::function<void(void *)> fn);
+	esp_err_t StartTask(void *taskData = nullptr);
+	void StopTask(const bool force = false);
+	void SuspendTask();
+	void ResumeTask();
+	mutable std::timed_mutex  taskcCtlLock;
+	mutable std::timed_mutex  taskLock;
 
 protected:
-	static SemaphorePointer_t GlobalTasLock;
-	mutable SemaphorePointer_t ctlLock;
-	mutable SemaphorePointer_t lock;
+	static std::mutex  GlobalTasLock;
 	void SetTaskStackSize(uint16_t stackSize);
 	void SetTaskPriority(uint8_t priority);
 	void SetTaskName(std::string name);
 	void SetTaskCore(BaseType_t coreId);
 	int GetTaskPriority() { return m_priority; };
-	esp_err_t StartTask(void *taskData = nullptr);
-	void StopTask(const bool force = false);
-	void SuspendTask();
-	void ResumeTask();
+
 	void ActivateTaskDebug() { debug = true; };
 	void DeActivateTaaskDebug() { debug = false; };
 	const TaskStatus_t &GetTaskFullInfo();
-
 	static const char *Status_ToString(eTaskState status);
 	static unsigned long Millis();
-	virtual void run(void *data) = 0; // Make run pure virtual
+	virtual void run(void *data) {}
+
+	// Make run pure virtual
 
 	// bool match_taskname(const std::string &value) { return (value == m_taskName); }
 };

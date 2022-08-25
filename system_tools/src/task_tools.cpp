@@ -22,7 +22,7 @@
 
 static const char *LOG_TAG = "Task";
 std::list<Task *> Task::runningTasks = {};
-SemaphorePointer_t Task::GlobalTasLock = nullptr;
+std::mutex Task::GlobalTasLock;
 /**
  * @brief Create an instance of the task class.
  *
@@ -37,19 +37,11 @@ Task::Task(const char *taskName, uint16_t stackSize, uint8_t priority, BaseType_
 																										  debug(_debug)
 {
 	std::string sem = m_taskName + "ctl";
-	ctlLock = Semaphore::CreateUnique(sem.c_str());
-	lock = Semaphore::CreateUnique(taskName);
-	/*	if (GlobalTasLock == nullptr)//TODO
-	{
-		GlobalTasLock = Semaphore::CreateUnique("Global");
-	}*/
-
 } // Task
 
 Task::~Task()
 {
-	StopTask();
-
+	StopTask(true);
 } // ~Task
 
 /**
@@ -75,7 +67,14 @@ void Task::runTask(void *pTaskInstance)
 	Task *pTask = (Task *)pTaskInstance;
 	if (pTask->debug)
 		ESP_LOGI(LOG_TAG, ">> Task entering : taskName=%s", pTask->m_taskName.c_str());
-	pTask->run(pTask->m_taskData);
+	if (pTask->mainRunFunction != nullptr)
+	{
+		pTask->mainRunFunction(pTask->m_taskData);
+	}
+	else
+	{
+		pTask->run(pTask->m_taskData);
+	}
 	if (pTask->debug)
 		ESP_LOGI(LOG_TAG, "<< Task exiting: taskName=%s", pTask->m_taskName.c_str());
 	pTask->StopTask();
@@ -95,7 +94,11 @@ esp_err_t Task::StartTask(void *taskData)
 		return ESP_ERR_INVALID_STATE;
 	}
 	m_taskData = taskData;
-	ctlLock->lock("start_fn");
+	std::unique_lock __Lock(taskcCtlLock, std::chrono::seconds(2));
+	if (!__Lock.owns_lock())
+	{
+		return ESP_FAIL;
+	}
 #ifdef ESP_PLATFORM
 	if (xTaskCreatePinnedToCore(&runTask, m_taskName.c_str(), m_stackSize, this, m_priority, &m_handle, m_coreId) == pdPASS)
 #else
@@ -103,12 +106,10 @@ esp_err_t Task::StartTask(void *taskData)
 #endif
 	{
 		runningTasks.push_back(this);
-		ctlLock->unlock();
 		return ESP_OK;
 	}
 	else
 	{
-		ctlLock->unlock();
 		return ESP_ERR_NO_MEM;
 	}
 } // start
@@ -122,16 +123,18 @@ void Task::StopTask(const bool force)
 {
 	if (m_handle == nullptr)
 		return;
-	auto buf = m_taskName;
-	auto fn2 = [&](const Task *tsk)
-	{ return tsk == this; };
-	runningTasks.remove_if(fn2);
+	runningTasks.remove_if([&](const Task *tsk)
+						   { return tsk == this; });
 	if (!force)
-		ctlLock->wait("StopTask");
-	xTaskHandle temp = m_handle;
-	m_handle = nullptr;
-	::vTaskDelete(temp);
-
+	{
+	if (!taskcCtlLock.try_lock_for(std::chrono::seconds(2)))
+		{
+			return ;
+		}
+	}
+	TaskHandle_t tempHandle = this->m_handle;
+	this->m_handle = nullptr;
+	vTaskDelete(tempHandle);
 } // stop
 
 /**
@@ -145,7 +148,7 @@ void Task::SetTaskStackSize(uint16_t stackSize)
 	m_stackSize = stackSize;
 }
 
-const TaskStatus_t IRAM_ATTR &Task::GetTaskFullInfo()
+const TaskStatus_t &Task::GetTaskFullInfo()
 {
 	vTaskGetInfo(this->m_handle, &m_pxTaskStatus, pdTRUE, eBlocked);
 	return m_pxTaskStatus;
@@ -167,6 +170,20 @@ void IRAM_ATTR Task::SetTaskPriority(uint8_t priority)
 	{
 		m_priority = priority;
 	}
+}
+
+esp_err_t Task::SetRunTask(std::function<void(void *)> fn)
+{
+	if (this->TaskIsRunning())
+	{
+		return ESP_ERR_INVALID_STATE;
+	}
+	if (fn == nullptr)
+	{
+		return ESP_ERR_INVALID_ARG;
+	}
+	this->mainRunFunction = fn;
+	return ESP_OK;
 }
 
 /**
@@ -202,9 +219,8 @@ void Task::SuspendTask()
 	{
 		if (eTaskGetState(m_handle) != eSuspended)
 		{
-			ctlLock->lock("SuspendTask");
+			std::unique_lock __Lock(taskcCtlLock);
 			vTaskSuspend(m_handle);
-			ctlLock->unlock();
 		}
 	}
 }
@@ -219,9 +235,8 @@ void Task::ResumeTask()
 	{
 		if (eTaskGetState(m_handle) == eSuspended)
 		{
-			ctlLock->lock("ResumeTask");
+			std::unique_lock __Lock(taskcCtlLock);
 			vTaskResume(m_handle);
-			ctlLock->unlock();
 		}
 	}
 }
@@ -252,7 +267,7 @@ bool Task::TaskIsRunning() const
  */
 unsigned long IRAM_ATTR Task::Millis()
 {
-	return pdTICKS_TO_MS(xTaskGetTickCount());
+	return xTaskGetTickCount();
 }
 
 /**
@@ -276,7 +291,7 @@ uint32_t IRAM_ATTR Task::GetTaskStackMin()
  */
 void Task::DumpRunningTasks()
 {
-	for (auto task : runningTasks)
+	for (const auto &task : runningTasks)
 	{
 		std::stringstream ss;
 		ss << "task name:" << task->m_taskName.c_str() << ", status:" << Task::Status_ToString(task->GetTaskStatus()) << ", core:" << task->m_coreId << ", prio: " << (task->m_priority) << ", minimum free stack:" << uxTaskGetStackHighWaterMark(task->m_handle) << " bytes";
@@ -288,23 +303,23 @@ std::string Task::GetRunningTasks()
 {
 
 	std::stringstream ss;
-	for (auto task : runningTasks)
+	for (const auto &task : runningTasks)
 	{
-
 		ss << "task name:" << task->m_taskName.c_str() << ", status:" << Task::Status_ToString(task->GetTaskStatus()) << ", core:" << task->m_coreId << ", prio: " << (task->m_priority) << ", minimum free stack:" << uxTaskGetStackHighWaterMark(task->m_handle) << " bytes"
 		   << "\n ";
 	}
 	return ss.str();
 }
 
-
-
 std::string Task::GetRunTimeStats()
 {
+	std::string ret("N/A");
+#if (configGENERATE_RUN_TIME_STATS == 1)
 	char *buffer = new char[40 * 20];
 	vTaskGetRunTimeStats(buffer);
-	std::string ret(buffer);
+	ret = std::string(buffer);
 	delete (buffer);
+#endif
 	return ret;
 }
 
@@ -345,18 +360,25 @@ void Task::print_this_task_info()
 #define xPortGetCoreID() "no_core"
 #endif
 	std::stringstream ss;
-	ss << "task name:" << pcTaskGetTaskName(nullptr) << ", Core id:" << xPortGetCoreID() << ", prio: " << uxTaskPriorityGet(nullptr) << ", minimum free stack:" << uxTaskGetStackHighWaterMark(nullptr) << " bytes";
-	ESP_LOGI("TASK INFO", "%s", ss.str().c_str());
+	ss << "task name:" << pcTaskGetTaskName(nullptr) << ",Core id:" << xPortGetCoreID() << ",prio:" << uxTaskPriorityGet(nullptr) << ",minimum free stack:" << uxTaskGetStackHighWaterMark(nullptr) << "bytes";
+	ESP_LOGI("TASK INFO", "%s\n\r", ss.str().c_str());
 }
+
+////////////////////////////////////////
+
+std::mutex AsyncTask::lock;
 
 AsyncTask::~AsyncTask()
 {
-	// LOGI(TAG, " AsyncTask destroying %d ", (int)this);
-	vTaskDelete(handle);
+	if (handle != nullptr)
+	{
+		vTaskDelete(handle);
+	}
 }
 
 AsyncTask::AsyncTask(std::function<void(void *)> cb, const char *_tag, void *arg) : mainRun(cb), TAG(_tag), argument(arg)
 {
+	std::lock_guard L(AsyncTask::lock);
 #ifdef ESP_PLATFORM
 	if (xTaskCreatePinnedToCore(StaticRun, "fastTask", 4092, this, 1, &handle, 0) == pdPASS)
 #else
@@ -372,17 +394,15 @@ AsyncTask::AsyncTask(std::function<void(void *)> cb, const char *_tag, void *arg
 		return;
 	}
 }
-std::mutex AsyncTask::lock;
 
 void AsyncTask::StaticRun(void *arg)
 {
-	const AsyncTask *_this = static_cast<AsyncTask *>(arg);
+	AsyncTask *_this = static_cast<AsyncTask *>(arg);
 	if (_this != nullptr)
 	{
-		AsyncTask::lock.lock();
 		_this->mainRun(_this->argument);
-		AsyncTask::lock.unlock();
 	}
-	delete (_this);
-	_this = nullptr;
+	TaskHandle_t this_handle = _this->handle;
+	_this->handle = nullptr;
+	vTaskDelete(this_handle);
 }

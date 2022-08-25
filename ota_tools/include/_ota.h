@@ -18,7 +18,6 @@
 #ifdef ESP_PLATFORM
 #include "esp_ota_ops.h"
 #endif // DEBUG
-#include "semphr.hpp"
 #include <freertos/event_groups.h>
 #include <string>
 

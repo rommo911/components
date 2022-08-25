@@ -34,7 +34,6 @@ private:
     unsigned int lastValue = 0;                                               // actual last raw value rad in ADC
     std::vector<uint32_t> meanValue;                                          // containning last several measures to smoothe out and put tot the lastSmoothedValue
     uint8_t meanValCounter;                                                   // used to manage the meanValue vector as a FIFO
-    SemaphorePointer_t lock;
     std::list<unsigned int*> targetVariables; // list of pointers to variable to be updated with last value - use
     static constexpr char TAG[] = "light_sensor";
     adc1_channel_t channel;

@@ -67,6 +67,7 @@ esp_err_t Mqtt::Init(const std::string& device, const esp_mqtt_client_config_t& 
 		LOGW(TAG, " Already initialized ! OK, will retry connection automatically");
 		return ESP_ERR_INVALID_STATE;
 	}
+	mqttRecieveDataQueue = xQueueCreate(10, sizeof(void*));
 	LoadFromNVS();
 	MqttUserConfig.activeAPIConfig = mqttCfg;
 	uint8_t mac[6];
@@ -107,6 +108,7 @@ esp_err_t Mqtt::Init(const std::string& device, const esp_mqtt_client_config_t& 
 Mqtt::~Mqtt()
 {
 	Disconnect();
+	vQueueDelete(mqttRecieveDataQueue);
 	esp_mqtt_client_destroy(MqttUserConfig.clentAPIHandle);
 	isInitialized = false;
 }
@@ -350,11 +352,9 @@ void Mqtt::MQTTEventCallbackHandler(void* handler_args, esp_event_base_t base, i
 	{
 		if (event_data->topic_len && event_data->data_len)
 		{
-			std::string topicBuffer(event_data->topic, event_data->topic_len);
-			std::string dataBuffer(event_data->data, event_data->data_len);
-			//Mqtt::MqttMsg_t msg = {0, 0, dataBuffer, topicBuffer, 0, 0};
+
 			_this->Loop->post_event(_this->EVENT_DATA);
-			_this->DataHandler(topicBuffer, dataBuffer);
+			_this->DataHandlerStatic(event_data->topic, event_data->topic_len, event_data->data, event_data->data_len);
 		}
 		break;
 	}
@@ -369,38 +369,34 @@ void Mqtt::MQTTEventCallbackHandler(void* handler_args, esp_event_base_t base, i
  *  will send an event to the xMqttEventGroup and send the
  * 	recieved data via a queue to the outside
  */
-void Mqtt::DataHandler(const std::string& topicBuffer, const std::string& dataBuffer)
+void Mqtt::DataHandlerStatic(const char* topicBuffer, const int topic_len, const char* dataBuffer, const int data_len)
 {
-	LOG_MQTT(TAG, " message payload %s, on topic %s", dataBuffer.c_str(), topicBuffer.c_str());
-	esp_err_t ret = ESP_ERR_INVALID_ARG;
-	for (const auto& cb : mqttRegisteredCommands)
+	//  redirect to Loop
+	this->DataHandlerToQueue(topicBuffer, topic_len, dataBuffer, data_len);
+	return;
+}
+
+
+void Mqtt::DataHandlerToQueue(const char* topicBuffer, const int topic_len, const char* dataBuffer, const int data_len)
+{
+	LOG_MQTT_V(TAG, " message HANDLER  %.*s, on topic %.*s", data_len, dataBuffer, topic_len, topicBuffer);
+	MqttRedirectMsg_tv2* const msg = new MqttRedirectMsg_tv2(topicBuffer, topic_len, dataBuffer, data_len);
+	// MqttRedirectMsg_tv2 *const p_but = msg;
+	auto ret = xQueueSend(this->mqttRecieveDataQueue, (void*)(&msg), pdMS_TO_TICKS(150));
+	if (ret != pdPASS)
 	{
-		//TODO
-		if (/*topicBuffer.find(cb.info) != -1*/ 1) // THIS is new: the info string in a callbak will determin to try the cb or not, so the info string become a keyword as well; fatser.
-		{
-			LOG_MQTT_V(TAG, "trying to respond with %s ... ", cb.info.c_str());
-			if (cb.callback(topicBuffer, dataBuffer, cb.argument) == ESP_OK)
-			{
-				ret = ESP_OK;
-				break;
-			}
-		}
+		delete msg;
 	}
-	switch (ret)
+	else
 	{
-	case ESP_ERR_INVALID_ARG:
-		LOGW(TAG, "Couldn't parse mqtt message %s ..", dataBuffer.c_str());
-		break;
-	case ESP_FAIL:
-		LOGW(TAG, "executing command failed with ESP_FAIL");
-		break;
-	case ESP_OK:
-		LOG_MQTT_V(TAG, "executing command succeed");
-		break;
-	default:
-		LOGE(TAG, "Unknown Err occured while executin command %s", dataBuffer.c_str());
-		break;
+		Loop->post_event(this->EVENT_DATA);
 	}
+	return;
+}
+
+QueueHandle_t Mqtt::GetDataReceiverHandle()
+{
+	return this->mqttRecieveDataQueue;
 }
 
 /**
@@ -513,34 +509,6 @@ esp_err_t Mqtt::SubscribeAllTopics()
 	return ret;
 }
 
-/**
- * @brief register a callback to be called when a message is received
- * 		  the callbacks number is NOT limited
- *
- * @param command
- * @return esp_err_t
- */
-esp_err_t Mqtt::RegisterCommand(const mqtt_data_callback_describtor_t& command)
-{
-	if (command.callback != nullptr)
-	{
-		for (auto const& cb : mqttRegisteredCommands)
-		{
-			if (cb.info == command.info) //serach for same info if registered already
-			{
-				LOGW(TAG, "parser: %s exist ", command.info.c_str());
-				return ESP_ERR_INVALID_ARG;
-			}
-		}
-		LOG_MQTT_V(TAG, "Registered parser : %s ", command.info.c_str());
-		mqttRegisteredCommands.push_back(std::move(command)); /// ok register
-		return ESP_OK;
-	}
-	else
-	{
-		return ESP_ERR_INVALID_ARG;
-	}
-}
 
 //CONFIG OVERRIDE
 

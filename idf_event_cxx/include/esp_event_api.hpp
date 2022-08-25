@@ -53,10 +53,7 @@ namespace idf
                         virtual esp_err_t post_from_isr(esp_event_base_t event_base,
                                                         int32_t event_id,
                                                         void *event_data,
-                                                        size_t event_data_size)
-                        {
-                                return ESP_FAIL;
-                        };
+                                                        size_t event_data_size) = 0;
 #endif // CONFIG_ESP_EVENT_POST_FROM_ISR
                 };
 
@@ -65,7 +62,7 @@ namespace idf
                  *
                  * It will direct calls to the default event loop API.
                  */
-#ifdef ESP_PLATFORM
+#ifdef ESP_PLATFORM // CONFIG_HAL_MOCK
 
                 class ESPEventAPIDefault : public ESPEventAPI
                 {
@@ -103,7 +100,7 @@ namespace idf
 #endif // CONFIG_ESP_EVENT_POST_FROM_ISR
                 };
 
-#else // ESP_PLATFORM
+#else // ESP_PLATFORM // CONFIG_HAL_MOCK
                 class ESPEventAPIDefault : public ESPEventAPI
                 {
                 public:
@@ -192,12 +189,16 @@ namespace idf
 
                         esp_err_t run(TickType_t ticks_to_run);
                         const esp_event_loop_handle_t &Handle() { return event_loop; };
+                        esp_err_t post_from_isr(esp_event_base_t event_base,
+                                                int32_t event_id,
+                                                void *event_data,
+                                                size_t event_data_size);
 
                 private:
                         esp_event_loop_handle_t event_loop;
                 };
 
-#endif //  ESP_PLATFORM //class ESPEventAPICustom
+#elif defined(MSVCS) //  ESP_PLATFORM //class ESPEventAPICustom
                 class ESPEventAPICustomFreeRTOS : public ESPEventAPI
                 {
                 public:
@@ -237,6 +238,7 @@ namespace idf
                         };
                         std::map<esp_event_post_instance_t, esp_event_handler_t, eventCompare> handlersList;
                 };
+#endif
         } // event
 
 } // idf

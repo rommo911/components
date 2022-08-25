@@ -19,7 +19,7 @@ LightSensor::LightSensor(EventLoop_p_t& EventLoop, adc1_channel_t _channel, cons
     Loop(EventLoop),
     channel(_channel)
 {
-    timer = std::make_unique<ESPTimer>([&](void* arg) {this->TimerRun(); }, TAG);
+    timer = std::make_unique<ESPTimer>(std::string(TAG), [&]() {this->TimerRun(); });
 
 }
 
@@ -39,9 +39,6 @@ esp_err_t LightSensor::Init()
     {
         return ESP_OK;
     }
-
-    if (lock == nullptr)
-        lock = Semaphore::CreateUnique("LightSensor"); // create a semaphore
     esp_err_t ret = adc1_config_width(ADC_WIDTH_BIT_12);
     ret = adc1_config_channel_atten(channel, ADC_ATTEN_DB_11);
     if (ret != ESP_OK)
@@ -116,7 +113,6 @@ uint32_t LightSensor::ReadADC()
  */
 esp_err_t LightSensor::TimerRun()
 {
-    lock->wait("ReadADC_Timer"); //TODO review
     lastValue = ReadADC();
     // Loop->post_event_data(EVENT_MEASURE, lastValue);
     return ESP_OK;
@@ -128,7 +124,6 @@ esp_err_t LightSensor::TimerRun()
  */
 void LightSensor::DeInit()
 {
-    lock->wait("DeInit", std::chrono::seconds(1));
     if (ESP_OK)
     {
         isInitialized = false;

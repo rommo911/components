@@ -33,7 +33,7 @@ class Blind
     uint8_t GetTargetPerc()const;
     void Cancel();
     bool IsBusy()const;
-    static esp_err_t mqtt_callback(const std::string&, const std::string&, void*);
+    esp_err_t mqtt_callback(const std::string& topic, const std::string& data);
     std::unique_ptr<ESPTimer> timer{ nullptr };
     std::unique_ptr<ESPTimer> timerIntr{ nullptr };
     std::string GetStatusStr()const;
@@ -48,7 +48,6 @@ class Blind
     //
     EventLoop_p_t loop{ nullptr };
     AsyncTask* Intertask{ nullptr };
-    SemaphorePointer_t lock;
     gpio_num_t pin_up, pin_down;
     uint8_t last_perc = 0;
     uint8_t perc = 0;

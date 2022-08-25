@@ -12,10 +12,10 @@ Blind::Blind(EventLoop_p_t& _loop,
 pin_up(_pin_up),
 pin_down(_pin_down)
 {
-    timer = std::make_unique<ESPTimer>([this](void* arg) {TimerExecute(); }, "blind");
+    timer = std::make_unique<ESPTimer>("blind",[this]() {TimerExecute(); });
     if (this->isInverted)
         std::swap(pin_up, pin_down);
-    timerIntr = std::make_unique<ESPTimer>([this](void* arg) { TimerExecuteIntr(); }, "blind2");
+    timerIntr = std::make_unique<ESPTimer>("blind2",[this]() { TimerExecuteIntr(); });
     InterruptQueue = xQueueCreate(10, sizeof(uint32_t));
     Intertask = new AsyncTask([this](void* arg) {this->InterruptTask(); }, "blind interrupt", (void*)this);
     EnableInterrupt(true);
@@ -64,13 +64,13 @@ bool Blind::handle_set_per_uint(uint8_t New_percentage)
             {
                 movingDirection = Direction_Down;
                 perc = New_percentage__;
-                timer->start_periodic(std::chrono::milliseconds(DownTime / 100), this);
+                timer->start_periodic(std::chrono::milliseconds(DownTime / 100));
             }
             else
             {
                 movingDirection = Direction_UP;
                 perc = New_percentage__;
-                timer->start_periodic(std::chrono::milliseconds(UpTime / 100), this);
+                timer->start_periodic(std::chrono::milliseconds(UpTime / 100));
             }
         }
     }
@@ -210,30 +210,29 @@ std::string Blind::GetStatusStr()const
 }
 
 
-esp_err_t Blind::mqtt_callback(const std::string& topic, const std::string& data, void* arg)
+esp_err_t Blind::mqtt_callback(const std::string& topic, const std::string& data)
 {
-    Blind* _this = (Blind*)arg;
     if ((topic.find("blind") != -1 || topic.find("window") != -1))
     {
         if ((topic.find("cmd") != -1 || topic.find("command") != -1))
         {
             if (data.find("OPEN") != -1)
             {
-                return  _this->handle_set_CMD(Direction_UP) ? ESP_OK : ESP_FAIL;
+                return  this->handle_set_CMD(Direction_UP) ? ESP_OK : ESP_FAIL;
             }
             if (data.find("CLOSE") != -1)
             {
-                return _this->handle_set_CMD(Direction_Down) ? ESP_OK : ESP_FAIL;
+                return this->handle_set_CMD(Direction_Down) ? ESP_OK : ESP_FAIL;
             }
             if (data.find("STOP") != -1)
             {
-                return  _this->handle_set_CMD(Direction_Stop) ? ESP_OK : ESP_FAIL;
+                return  this->handle_set_CMD(Direction_Stop) ? ESP_OK : ESP_FAIL;
             }
         }
         else
             if ((topic.find("setpos") != -1 || topic.find("set_pos") != -1 || topic.find("pos") != -1))
             {
-                return  _this->handle_set_per(data) ? ESP_OK : ESP_FAIL;
+                return  this->handle_set_per(data) ? ESP_OK : ESP_FAIL;
             }
     }
     return ESP_FAIL;

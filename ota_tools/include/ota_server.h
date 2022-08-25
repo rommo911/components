@@ -3,6 +3,7 @@
 #include "system.hpp"
 #include "task_tools.h"
 #include "lwip/sockets.h"
+#include "esp_ota_ops.h"
 
 typedef esp_err_t (*ota_cb_t)(void *arg);
 

@@ -17,7 +17,6 @@
 #include "esp_attr.h"
 #include "esp_system.h"
 #include "mqtt_client.h"
-#include "semphr.hpp"
 #include <esp_types.h>
 #include <functional>
 #include <string>
@@ -26,9 +25,25 @@
 class Mqtt;
 extern std::shared_ptr<Mqtt> MqttDOL;
 
+class MqttRedirectMsg_tv2
+{
+public:
+	explicit MqttRedirectMsg_tv2(const char* _topic, const std::size_t topicLen, const char* _data, const std::size_t dataLen) : data(std::string(_data, dataLen)),
+		topic(std::string(_topic, topicLen))
+	{
+	}
+	MqttRedirectMsg_tv2() = delete;
+	MqttRedirectMsg_tv2(const MqttRedirectMsg_tv2&) = delete;
+	MqttRedirectMsg_tv2(MqttRedirectMsg_tv2&) = delete;
+	MqttRedirectMsg_tv2(MqttRedirectMsg_tv2&&) = delete;
+	const std::string data;
+	const std::string topic;
+};
+
+
 class Mqtt
 {
-	private:
+private:
 	EventLoop_p_t Loop;
 	struct MqttUserConfig_t
 	{
@@ -40,14 +55,13 @@ class Mqtt
 		esp_mqtt_client_handle_t clentAPIHandle;
 		esp_mqtt_client_config_t activeAPIConfig;
 	} MqttUserConfig;
-
+	QueueHandle_t mqttRecieveDataQueue{ nullptr };
 	const uint8_t MAX_DISCONNECTION_COUNT = 10;
 	bool isInitialized = false;
 	bool isConnected = false;
 	RTC_DATA_ATTR static uint8_t disconnectionCounter;
-	std::vector<mqtt_data_callback_describtor_t> mqttRegisteredCommands;
 
-	public:
+public:
 	static constexpr char TAG[] = "Mqtt-DOL";
 	struct MqttMsg_t
 	{
@@ -87,10 +101,10 @@ class Mqtt
 	esp_err_t Publish(std::pair<std::string, std::string> data, const uint8_t qos = 1, const bool retained = false) const;
 	const std::string& GetTopicBase() const;
 	esp_err_t SetLastWill(const std::string& LwTopic, const std::string& lwMsg);
-	esp_err_t RegisterCommand(const mqtt_data_callback_describtor_t& command);
 	void ResetDisconnectionCounter();
+	QueueHandle_t GetDataReceiverHandle();
 
-	private:
+private:
 	//CONFIG OVERRIDE
 	esp_err_t RestoreDefault();
 	esp_err_t LoadFromNVS();
@@ -98,7 +112,9 @@ class Mqtt
 	void ErrorHandler(esp_mqtt_error_codes_t);
 	void ConnectedHandler();
 	void DisconnectedHandler();
-	void DataHandler(const std::string& topic, const std::string& data);
+	void DataHandlerStatic(const char* topicBuffer, const int topic_len, const char* dataBuffer, const int data_len);
+	void DataHandlerToQueue(const char* topicBuffer, const int topic_len, const char* dataBuffer, const int data_len);
+
 	static void MQTTEventCallbackHandler(void* handler_args, esp_event_base_t base, int32_t event_id, void* event_data);
 	//generate topics from Mac string
 	//subscribe to default and user defined topics

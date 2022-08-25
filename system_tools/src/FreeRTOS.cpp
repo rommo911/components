@@ -14,8 +14,7 @@ static const char *TAG = "FreeRTOS";
 #define DEBUG_SEM ESP_LOGI
 //#define ENABLE_SEM_DEBUG
 
-//static
-std::map<const char *, TimerHandle_t, FreeRTOS::StrCompare> FreeRTOS::Timer::runningTimersList;
+// static
 
 /**
  * Sleep for the specified number of milliseconds.
@@ -33,15 +32,15 @@ void FreeRTOS::sleep(uint32_t ms)
  * @param[in] param An optional parameter to be passed to the started task.
  * @param[in] stackSize An optional paremeter supplying the size of the stack in which to run the task.
  */
-esp_err_t FreeRTOS::StartTask(void task(void*), const char* taskName, uint32_t stackSize, void* param , UBaseType_t uxPriority, TaskHandle_t* const pvCreatedTask , const BaseType_t xCoreID )
+esp_err_t FreeRTOS::StartTask(void task(void *), const char *taskName, uint32_t stackSize, void *param, UBaseType_t uxPriority, TaskHandle_t *const pvCreatedTask, const BaseType_t xCoreID)
 {
 #ifdef ESP_PLATFORM
-	if (xTaskCreatePinnedToCore(task, taskName, stackSize, param, uxPriority, pvCreatedTask,xCoreID) == pdPASS)
-#else 
+	if (xTaskCreatePinnedToCore(task, taskName, stackSize, param, uxPriority, pvCreatedTask, xCoreID) == pdPASS)
+#else
 	if (xTaskCreate(task, taskName, stackSize, param, uxPriority, pvCreatedTask) == pdPASS)
-#endif 
+#endif
 	{
-		return ESP_OK; 
+		return ESP_OK;
 	}
 	else
 	{
@@ -60,22 +59,24 @@ uint32_t FreeRTOS::millis()
 } // getTimeSinceStart
 
 /**
- * @brief 
- * 
- * @param name Timer name 
- * @param millisSeconds time 
- * @param Periodic  true: repeated autoreload , else one shot 
- * @param arg 
- * @param cb  callback to be called 
- * @return TimerHandle_t 
+ * @brief
+ *
+ * @param name Timer name
+ * @param millisSeconds time
+ * @param Periodic  true: repeated autoreload , else one shot
+ * @param arg
+ * @param cb  callback to be called
+ * @return TimerHandle_t
  */
-esp_err_t FreeRTOS::Timer::Create(const bool Periodic)
+esp_err_t FreeRTOS::Timer::Create()
 {
-	//lock = Semaphore::CreateUnique(m_TimerName.c_str());
-	m_TimerHandle = xTimerCreate(m_TimerName.c_str(), 10, (Periodic == true) ? pdTRUE : pdFALSE, this, TimerStaticCB);
+	if (m_TimerHandle != nullptr)
+		return ESP_OK;
+	if (this->timerRunFn == nullptr)
+		return ESP_ERR_INVALID_ARG;
+	m_TimerHandle = xTimerCreate(m_TimerName.c_str(), 10, (periodic == true) ? pdTRUE : pdFALSE, this, TimerStaticCB);
 	if (m_TimerHandle != nullptr)
 	{
-		runningTimersList[m_TimerName.c_str()] = m_TimerHandle;
 		return ESP_OK;
 	}
 	else
@@ -83,64 +84,71 @@ esp_err_t FreeRTOS::Timer::Create(const bool Periodic)
 		ESP_LOGE(TAG, " couldn't creat timer %s ", m_TimerName.c_str());
 		return ESP_FAIL;
 	}
-
-	return ESP_ERR_INVALID_ARG;
 }
 
 /**
- * @brief 
- * 
- * @param ms 
- * @param arg 
- * @return esp_err_t 
- */
-esp_err_t FreeRTOS::Timer::TimerStart(std::chrono::milliseconds ms, void *arg)
-{
-	if (!TimerTaskIsRunning())
-	{
-		timerArgument = arg;
-		m_TimerTick = pdMS_TO_TICKS(ms.count());
-		TimerModify(m_TimerTick);
-		AutoLock _lock(lock);
-		BaseType_t ret = xTimerStart(m_TimerHandle, 0);
-		return ret == pdPASS ? ESP_OK : ESP_FAIL;
-	}
-	return ESP_ERR_INVALID_STATE;
-}
-
-/**
- * @brief 
- * 
- * @return esp_err_t 
+ * @brief
+ *
+ * @return esp_err_t
  */
 esp_err_t FreeRTOS::Timer::TimerStop()
 {
-	if (!TimerTaskIsRunning())
+	if (TimerTaskIsRunning())
 	{
-		AutoLock _lock(lock);
+		std::lock_guard<std::timed_mutex> __Lock(lock);
 		BaseType_t ret = xTimerStop(m_TimerHandle, 0);
 		return ret == pdPASS ? ESP_OK : ESP_FAIL;
 	}
 	return ESP_ERR_INVALID_STATE;
 }
 
+esp_err_t FreeRTOS::Timer::TimerStart()
+{
+	if (period.count() == 0)
+		return ESP_ERR_INVALID_STATE;
+	esp_err_t ret = this->Create();
+	if (ret == ESP_OK)
+	{
+		if (!TimerTaskIsRunning())
+		{
+			std::lock_guard<std::timed_mutex> __Lock(lock);
+			BaseType_t ret = xTimerStart(m_TimerHandle, 0);
+			return ret == pdPASS ? ESP_OK : ESP_FAIL;
+		}
+		else
+		{
+			return ESP_ERR_INVALID_STATE;
+		}
+	}
+	return ESP_FAIL;
+}
+
+esp_err_t FreeRTOS::Timer::SetFunction(std::function<void()> fn, bool _periodic)
+{
+	if (fn == nullptr)
+		return ESP_ERR_INVALID_ARG;
+	timerRunFn = fn;
+	this->periodic = _periodic;
+	return this->Create();
+}
+
 /**
- * @brief 
- * 
- * @param arg 
+ * @brief
+ *
+ * @param arg
  */
 void FreeRTOS::Timer::TimerStaticCB(TimerHandle_t arg)
 {
 	FreeRTOS::Timer *_this = static_cast<FreeRTOS::Timer *>(pvTimerGetTimerID(arg));
-	AutoLock _lock(_this->lock);
-	_this->TimerRun(_this->timerArgument);
+	std::lock_guard<std::timed_mutex> __Lock(_this->lock);
+	_this->timerRunFn();
 }
 
 /**
- * @brief 
- * 
- * @return true 
- * @return false 
+ * @brief
+ *
+ * @return true
+ * @return false
  */
 bool FreeRTOS::Timer::TimerTaskIsRunning() const
 {
@@ -148,10 +156,10 @@ bool FreeRTOS::Timer::TimerTaskIsRunning() const
 }
 
 /**
- * @brief stop the timer and delete its handle 
- * 
- * @param handle 
- * @return esp_err_t 
+ * @brief stop the timer and delete its handle
+ *
+ * @param handle
+ * @return esp_err_t
  */
 esp_err_t FreeRTOS::Timer::TimerDeinit()
 {
@@ -169,27 +177,30 @@ esp_err_t FreeRTOS::Timer::TimerDeinit()
 		return ESP_FAIL;
 	}
 	m_TimerHandle = NULL;
-	runningTimersList.erase(m_TimerName.c_str());
 	return ESP_OK;
 }
 
-/**
- * @brief stop the timer, change its delay , and restart it 
- * 
- * @param hanlde 
- * @param millisSeconds 
- * @return esp_err_t 
- */
-esp_err_t FreeRTOS::Timer::TimerModify(const uint32_t millisSeconds)
+esp_err_t FreeRTOS::Timer::TimerRestart()
 {
-	AutoLock _lock(lock);
-	return xTimerChangePeriod(m_TimerHandle, pdMS_TO_TICKS(millisSeconds), 100) == pdPASS ? ESP_OK : ESP_FAIL;
+	if (period.count() == 0)
+		return ESP_ERR_INVALID_STATE;
+	esp_err_t ret = this->Create();
+	if (ret == ESP_OK)
+	{
+		if (TimerTaskIsRunning())
+			this->TimerStop();
+		this->SetPeriod(this->period);
+		std::lock_guard<std::timed_mutex> __Lock(lock);
+		BaseType_t ret = xTimerStart(m_TimerHandle, 0);
+		return ret == pdPASS ? ESP_OK : ESP_FAIL;
+	}
+	return ESP_FAIL;
 }
 
 /**
- * @brief return freertos global number of task 
- * 
- * @return int 
+ * @brief return freertos global number of task
+ *
+ * @return int
  */
 int FreeRTOS::GetRunningTaskNum()
 {
@@ -197,13 +208,17 @@ int FreeRTOS::GetRunningTaskNum()
 }
 
 /**
- * @brief return freertos global list of task names 
- * 
- * @return std::string 
+ * @brief return freertos global list of task names
+ *
+ * @return std::string
  */
 std::string FreeRTOS::GetTaskList()
 {
+#if (configUSE_TRACE_FACILITY == 1)
 	char pcWriteBuffer[40 * 20]; // 40 char /task * 40 task ?
 	vTaskList(pcWriteBuffer);
 	return std::string(pcWriteBuffer);
+#else
+	return std::string("N/A");
+#endif
 }

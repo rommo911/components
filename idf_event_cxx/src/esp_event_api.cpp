@@ -3,7 +3,6 @@
 #include "esp_event.h"
 #include "esp_event_api.hpp"
 #include "esp_event_cxx.hpp"
-#ifdef __cpp_exceptions
 
 namespace idf
 {
@@ -120,6 +119,20 @@ namespace idf
                                      event_data_size,
                                      ticks_to_wait);
         }
+#if CONFIG_ESP_EVENT_POST_FROM_ISR
+        esp_err_t ESPEventAPICustom::post_from_isr(esp_event_base_t event_base,
+                                                   int32_t event_id,
+                                                   void *event_data,
+                                                   size_t event_data_size)
+        {
+            BaseType_t unblocked;
+            return esp_event_isr_post_to(event_loop, event_base,
+                                         event_id,
+                                         event_data,
+                                         event_data_size,
+                                         &unblocked);
+        }
+#endif
 
         esp_err_t ESPEventAPICustom::run(TickType_t ticks_to_run)
         {
@@ -128,7 +141,7 @@ namespace idf
 
         //*---------------------------------------------------------freertos costum ----------------------------------
         //#ifdef CONFIG_HAL_MOCK
-
+#if defined(MSVCS)
         ESPEventAPICustomFreeRTOS::ESPEventAPICustomFreeRTOS()
         {
             this->Start();
@@ -186,10 +199,10 @@ namespace idf
 
                         {
 
-                            // auto now = GET_NOW_MILLIS;
+                            // auto now = tools::GetNowMillis();
                             registeredList.second(registeredList.first.event_handler_arg, event.base, event.id, event.data);
-                            //auto executionTime = GET_NOW_MILLIS - now;
-                            //ESP_LOGD("EventLoop", " executing event %s %d, took %lldms", event.base, event.id, executionTime);
+                            // auto executionTime = tools::GetNowMillis() - now;
+                            // ESP_LOGD("EventLoop", " executing event %s %d, took %lldms", event.base, event.id, executionTime);
                         }
                     }
                 }
@@ -205,10 +218,9 @@ namespace idf
             }
             vTaskDelete(NULL);
         }
-        //#endif
-    } // event
+#endif // MSVCS
+    }  // event
 
 } // idf
 
-#endif // __cpp_exceptions
 #endif

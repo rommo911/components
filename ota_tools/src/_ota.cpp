@@ -272,7 +272,6 @@ void Ota::run(void* arg)
         EventHandlerSync_t otaScheduler(Loop);
         otaScheduler.listen_to(EVENT_FORCE_OTA);
         otaScheduler.wait_event_for(std::chrono::seconds(otaDelay));
-        ctlLock->lock("run");
         try
         {
             ret = DoOTA(false);
@@ -292,7 +291,6 @@ void Ota::run(void* arg)
         {
             LOGE(TAG, " - %s", e.what());
         }
-        ctlLock->unlock();
     }
 }
 

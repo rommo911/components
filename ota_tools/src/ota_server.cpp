@@ -233,7 +233,6 @@ void OTA_Server::run(void* arg)
     while (1)
     {
         create_tcp_server(); // rhis will block until connection is open
-        ctlLock->lock("DO OTA");
         esp_err_t ret = Do_OTA();
         if (ret == ESP_OK)
         {
@@ -241,7 +240,6 @@ void OTA_Server::run(void* arg)
             vTaskDelay(pdMS_TO_TICKS(1500));
             esp_restart();
         }
-        ctlLock->unlock();
     }
 }
 
