@@ -5,7 +5,7 @@
 #include "lwip/sockets.h"
 #include "esp_ota_ops.h"
 
-typedef esp_err_t (*ota_cb_t)(void *arg);
+typedef std::function<esp_err_t(void*)>  ota_cb_t;
 
 class OTA_Server : public Task
 {

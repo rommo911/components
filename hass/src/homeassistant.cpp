@@ -12,15 +12,50 @@ Copyright (C) 2019-2021 by Maxim Prokhorov <prokhorov dot max at outlook dot com
 #include "homeassistant.h"
 #include "esp_log.h"
 namespace homeassistant {
+    homeassistant::Device_Description_t hassDevCtxDescription;
+    homeassistant::BaseDevCtx thisDevideCtx(hassDevCtxDescription);
     static std::vector<Discovery*> discoveryList;
-    void UpdateDiscoveryList()
+    esp_err_t UpdateDiscoveryList()
     {
+        if (discoveryList.size() == 0)
+            return ESP_ERR_INVALID_SIZE;
         for (auto& d : discoveryList)
         {
             d->UpdateDevCtx();
             d->ProcessJson();
         }
+        return ESP_OK;
     }
+    esp_err_t PublishDiscovery_and_Available()
+    {
+        if (statsPublishDiscoveryFunction == nullptr)
+            return ESP_ERR_INVALID_STATE;
+        esp_err_t ret = ESP_OK;
+        for (auto& d : discoveryList)
+        {
+            ret |= statsPublishDiscoveryFunction(d->GenerateDiscoveryData());
+            ret |= statsPublishDiscoveryFunction(d->AvailabilityMessage());
+        }
+        return ret ;
+    }
+    esp_err_t PublishAllStats()
+    {
+        if (MqttPublishFunction == nullptr)
+            return ESP_ERR_INVALID_STATE;
+        esp_err_t ret = ESP_OK;
+        for (auto& statsGen : statsGenerateFunctions)
+        {
+            ret |= MqttPublishFunction(statsGen());
+        }
+        return ret ;
+    }
+    typedef std::pair<std::string,std::string> StringPair_t;
+    typedef std::function<esp_err_t(const StringPair_t)> PublishPairFunc_t ;
+    std::vector<std::function<const StringPair_t()>> statsGenerateFunctions = {};
+    PublishPairFunc_t statsPublishDiscoveryFunction = nullptr;
+    PublishPairFunc_t MqttPublishFunction = nullptr;
+
+
     static constexpr char mqtt_payload_online[] = "online";
     static constexpr char mqtt_payload_offline[] = "offline";
     static constexpr char payload_on[] = "on";
@@ -80,8 +115,8 @@ namespace homeassistant {
         return _json;
     }
 
-    Discovery::Discovery(BaseDevCtx& ctx, const std::string& _hass_mqtt_device) :
-        _BaseDevCtx(ctx),
+    Discovery::Discovery(const std::string& _hass_mqtt_device) :
+        _BaseDevCtx(homeassistant::thisDevideCtx),
         hass_mqtt_device(_hass_mqtt_device)
     {
         discoveryList.push_back(this);
@@ -134,15 +169,17 @@ namespace homeassistant {
         ESP_LOGW("HASS", " CommandTopic \n\r %s \n\r", CommandTopic().c_str());
         ESP_LOGW("HASS", " DiscoveryMessage \n\r %s \n\r", discovery_message.c_str());
     }
-    const std::string& Discovery::ConnectionTopic()
+    const std::string& Discovery::ConnectionTopic() const
     {
         return this->availability_topic;
     }
-    const std::string Discovery::DiscoveryTopic() { return  this->discovery_topic.str(); }
-    const std::string& Discovery::AvailabilityTopic() { return  this->availability_topic; }
-    std::string Discovery::StatusTopic() { return std::string(topics_prefix.str() + "/state"); };
-    std::string Discovery::CommandTopic() { return  std::string(topics_prefix.str() + "/cmd"); }
-    const std::string& Discovery::DiscoveryMessage() { return  this->discovery_message; }
+    const std::string Discovery::DiscoveryTopic() const { return  this->discovery_topic.str(); }
+    const std::string& Discovery::AvailabilityTopic() const { return  this->availability_topic; }
+    const std::pair<std::string,std::string> Discovery::AvailabilityMessage() const { return std::make_pair(this->availability_topic, mqtt_payload_online); }
+
+    const std::string Discovery::StatusTopic() const { return std::string(topics_prefix.str() + "/state"); };
+    const std::string Discovery::CommandTopic() const { return  std::string(topics_prefix.str() + "/cmd"); }
+    const std::string& Discovery::DiscoveryMessage() const  { return  this->discovery_message; }
 
     void RelayDiscovery::ProcessFinalJson()
     {

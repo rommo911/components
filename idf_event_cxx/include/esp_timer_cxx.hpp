@@ -62,9 +62,8 @@ public:
      * @param timeout_cb The timeout callback.
      * @param timer_name The name of the timer (optional). This is for debugging using \c esp_timer_dump().
      */
-    ESPTimer(std::function<void()> timeout_cb , const std::string &timer_name = "ESPTimer");
-    ESPTimer(const std::string &timer_name , std::function<void()> timeout_cb );
-    ESPTimer(const std::string &timer_name = "ESPTimer");
+    ESPTimer(std::function<void()> timeout_cb, const std::string& timer_name = "ESPTimer");
+    ESPTimer(const std::string& timer_name = "ESPTimer");
 
     /**
      * Stop the timer if necessary and delete it.
@@ -73,11 +72,11 @@ public:
     /**
      * Default copy constructor is deleted since one instance of esp_timer_handle_t must not be shared.
      */
-    ESPTimer(const ESPTimer &) = delete;
+    ESPTimer(const ESPTimer&) = delete;
     /**
      * Default copy assignment is deleted since one instance of esp_timer_handle_t must not be shared.
      */
-    ESPTimer &operator=(const ESPTimer &) = delete;
+    ESPTimer& operator=(const ESPTimer&) = delete;
     /**
      * @brief Start one-shot timer
      *
@@ -88,7 +87,7 @@ public:
      * @throws ESPException with error ESP_ERR_INVALID_STATE if the timer is already running.
      */
     template <typename r, typename p>
-    esp_err_t start_once(const std::chrono::duration<r, p> &timeout) noexcept
+    esp_err_t start_once(const std::chrono::duration<r, p>& timeout) noexcept
     {
         if (timeout_cb == nullptr)
         {
@@ -104,6 +103,10 @@ public:
         {
             currentType = ONCE;
         }
+        else
+        {
+            ESP_LOGE(name.c_str(), "start_once ERROR %s", esp_err_to_name(ret));
+        }
         return ret;
     }
 
@@ -115,9 +118,10 @@ public:
      * @param timeout
      */
     template <typename r, typename p>
-    void setPeriod(const std::chrono::duration<r, p> &timeout) noexcept
+    void setPeriod(const std::chrono::duration<r, p>& timeout) noexcept
     {
         period = std::chrono::duration_cast<std::chrono::microseconds>(timeout);
+        ESP_LOGW(name.c_str(), "periode = %lld", period.count());
     }
 
     /**
@@ -138,7 +142,7 @@ public:
      * @param timeout timer timeout, in microseconds relative to the current moment.
      */
     template <typename r, typename p>
-    esp_err_t start_periodic(const std::chrono::duration<r, p> &_period) noexcept
+    esp_err_t start_periodic(const std::chrono::duration<r, p>& _period) noexcept
     {
         if (timeout_cb == nullptr)
         {
@@ -153,7 +157,7 @@ public:
         }
         else
         {
-            ESP_LOGE(this->name.c_str(), "Timer error %s", esp_err_to_name(ret));
+            ESP_LOGE(this->name.c_str(), " start_periodic Timer error %s", esp_err_to_name(ret));
         }
         return ret;
     }
@@ -188,14 +192,14 @@ public:
     esp_err_t reset_once();
 
     template <typename r, typename p>
-    static auto FastTimerOnce(std::function<void(void *)> timeout_cb, const std::chrono::duration<r, p> &time, const std::string &timer_name = "ESPTimer", void *arg = nullptr, bool auto_destroy = false)
+    static auto FastTimerOnce(std::function<void(void*)> timeout_cb, const std::chrono::duration<r, p>& time, const std::string& timer_name = "ESPTimer", void* arg = nullptr, bool auto_destroy = false)
     {
         auto timer = std::make_shared<ESPTimer>(timeout_cb, timer_name);
         timer->autoDestroy = auto_destroy;
         timer->start_once(std::chrono::duration_cast<std::chrono::microseconds>(time));
         return timer;
     }
-    const auto &GetPeriod()
+    const auto& GetPeriod()
     {
         return period;
     }
@@ -204,7 +208,7 @@ private:
     /**
      * Internal callback to hook into esp_timer component.
      */
-    static void esp_timer_cb(void *arg);
+    static void esp_timer_cb(void* arg);
     /**
      * Timer instance of the underlying esp_event component.
      */
@@ -212,7 +216,7 @@ private:
     /**
      * Callback which will be called once the timer triggers.
      */
-    std::function<void()> timeout_cb {nullptr};
+    std::function<void()> timeout_cb{ nullptr };
     /**
      * Name of the timer, will be passed to the underlying timer framework and is used for debugging.
      */
@@ -220,11 +224,11 @@ private:
     /**
      * expiration timeout
      */
-    std::chrono::microseconds period{0};
+    std::chrono::microseconds period{ 0 };
     /**
      * experimental
      */
-    bool autoDestroy{false};
+    bool autoDestroy{ false };
     /**
      * flag
      */

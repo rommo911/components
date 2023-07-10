@@ -75,6 +75,8 @@ public:
         Timer(const char *name = "timer") : m_TimerName(std::string(name))
         {
         }
+        Timer(const Timer& ) = default;
+        Timer(Timer&& ) = default;
         ~Timer()
         {
             TimerDeinit();

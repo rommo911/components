@@ -21,25 +21,20 @@
 #include <functional>
 #include "esp_log.h"
 
-ESPTimer::ESPTimer(std::function<void()> timeout_cb, const std::string& timer_name)
-    : timeout_cb(timeout_cb), name(timer_name)
+ESPTimer::ESPTimer(std::function<void()> _timeout_cb, const std::string& timer_name)
+    : timeout_cb(_timeout_cb), name(timer_name)
 {
     esp_timer_create_args_t timer_args = {};
     timer_args.callback = esp_timer_cb;
     timer_args.arg = this;
     timer_args.dispatch_method = ESP_TIMER_TASK;
     timer_args.name = name.c_str();
-    this->init = esp_timer_create(&timer_args, &timer_handle) == ESP_OK ? true : false;
-}
-
-ESPTimer::ESPTimer(const std::string& timer_name, std::function<void()> timeout_cb) : timeout_cb(timeout_cb), name(timer_name)
-{
-    esp_timer_create_args_t timer_args = {};
-    timer_args.callback = esp_timer_cb;
-    timer_args.arg = this;
-    timer_args.dispatch_method = ESP_TIMER_TASK;
-    timer_args.name = name.c_str();
-    this->init = esp_timer_create(&timer_args, &timer_handle) == ESP_OK ? true : false;
+    esp_err_t ret = esp_timer_create(&timer_args, &timer_handle);
+    this->init = ret == ESP_OK ? true : false;
+    if (!init)
+    {
+        ESP_LOGE(name.c_str(), "ESPTimer constuctor error  ERROR %s ", esp_err_to_name(ret));
+    }
 }
 
 
@@ -74,7 +69,12 @@ void ESPTimer::setCallback(std::function<void()> _timeout_cb) noexcept
         timer_args.arg = this;
         timer_args.dispatch_method = ESP_TIMER_TASK;
         timer_args.name = name.c_str();
-        this->init = esp_timer_create(&timer_args, &timer_handle) == ESP_OK ? true : false;
+        esp_err_t ret = esp_timer_create(&timer_args, &timer_handle);
+        this->init = ret == ESP_OK ? true : false;
+        if (!init)
+        {
+            ESP_LOGE(name.c_str(), "setCallback ERROR %s ", esp_err_to_name(ret));
+        }
     }
 }
 
@@ -86,6 +86,10 @@ esp_err_t ESPTimer::stop() noexcept
     {
         this->currentType = NONE;
     }
+    else
+    {
+        ESP_LOGE(name.c_str(), "stop ERROR %s", esp_err_to_name(ret));
+    }
     return ret;
 }
 
@@ -93,6 +97,7 @@ esp_err_t ESPTimer::reset_periodic()
 {
     if (timeout_cb == nullptr || !init)
     {
+        ESP_LOGE(name.c_str(), "reset_periodic ERROR ");
         return ESP_ERR_INVALID_STATE;
     }
     if (stop() == ESP_OK)
@@ -106,6 +111,7 @@ esp_err_t ESPTimer::reset_once()
 {
     if (timeout_cb == nullptr || !init)
     {
+
         return ESP_ERR_INVALID_STATE;
     }
     if (stop() == ESP_OK)
@@ -122,6 +128,11 @@ void ESPTimer::esp_timer_cb(void* arg)
     {
         ESP_LOGV(timer->name.c_str(), "Timer EXPIRED, executing cb");
         timer->timeout_cb();
+    }
+    else
+    {
+        ESP_LOGE(timer->name.c_str(), "cb NULL ERROR ");
+
     }
     if (timer->currentType == ONCE)
     {

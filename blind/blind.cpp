@@ -12,10 +12,10 @@ Blind::Blind(EventLoop_p_t& _loop,
 pin_up(_pin_up),
 pin_down(_pin_down)
 {
-    timer = std::make_unique<ESPTimer>("blind",[this]() {TimerExecute(); });
+    timer = std::make_unique<ESPTimer>([this]() {TimerExecute(); }, "blind");
     if (this->isInverted)
         std::swap(pin_up, pin_down);
-    timerIntr = std::make_unique<ESPTimer>("blind2",[this]() { TimerExecuteIntr(); });
+    timerIntr = std::make_unique<ESPTimer>([this]() { TimerExecuteIntr(); }, "blind2");
     InterruptQueue = xQueueCreate(10, sizeof(uint32_t));
     Intertask = new AsyncTask([this](void* arg) {this->InterruptTask(); }, "blind interrupt", (void*)this);
     EnableInterrupt(true);

@@ -44,7 +44,7 @@ void Rotary::setup(gpio_num_t rot_pin1, gpio_num_t rot_pin2, gpio_num_t pin1, in
     rotary_encoder_add(&re);
     Rotarychanged = false;
     Rotaryposition = pos;
-    sleepTimer = std::make_unique<ESPTimer>("suspend rotary",[this]() {rotary_encoder_suspend(&re);});
+    sleepTimer = std::make_unique<ESPTimer>([this]() {rotary_encoder_suspend(&re);}, "suspend rotary");
     StartTask(this);
 }
 
@@ -86,7 +86,8 @@ void Rotary::run(void* arg)
                     case RE_ET_CHANGED:
                         if (e.diff > 0 && (_this->Rotaryposition + e.diff) <= max)
                         {
-                            timout = Task::Millis() + 1500;
+                            timout = ((uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS));
+                            timout += 1500;
                             _this->Rotaryposition += (e.diff * 2);
                             if (_this->Rotaryposition > max)
                                 _this->Rotaryposition = max;
@@ -97,7 +98,8 @@ void Rotary::run(void* arg)
                         }
                         else if (e.diff < 0 && (_this->Rotaryposition + e.diff) >= min)
                         {
-                            timout = Task::Millis() + 1500;
+                            timout = ((uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS));
+                            timout += 1500;
                             _this->Rotaryposition += (e.diff * 2);
                             if (_this->Rotaryposition < min)
                                 _this->Rotaryposition = min;
@@ -115,7 +117,7 @@ void Rotary::run(void* arg)
                         break;
                     }
                 }
-                else if (Task::Millis() > timout && _this->Rotarychanged)
+                else if (((uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS)) > timout && _this->Rotarychanged)
                 {
                     _this->Rotarychanged = false;
                     //ESP_LOGI("rot", "Volume timeout ");

@@ -23,19 +23,19 @@
 #include <list>
 #define _DEVICENAME "rami"
 class Mqtt;
-extern std::shared_ptr<Mqtt> MqttDOL;
+extern std::shared_ptr<Mqtt> MqttClass;
 
-class MqttRedirectMsg_tv2
+class MqttStringConstruct
 {
 public:
-	explicit MqttRedirectMsg_tv2(const char* _topic, const std::size_t topicLen, const char* _data, const std::size_t dataLen) : data(std::string(_data, dataLen)),
+	explicit MqttStringConstruct(const char* _topic, const std::size_t topicLen, const char* _data, const std::size_t dataLen) : data(std::string(_data, dataLen)),
 		topic(std::string(_topic, topicLen))
 	{
 	}
-	MqttRedirectMsg_tv2() = delete;
-	MqttRedirectMsg_tv2(const MqttRedirectMsg_tv2&) = delete;
-	MqttRedirectMsg_tv2(MqttRedirectMsg_tv2&) = delete;
-	MqttRedirectMsg_tv2(MqttRedirectMsg_tv2&&) = delete;
+	MqttStringConstruct() = delete;
+	MqttStringConstruct(const MqttStringConstruct&) = delete;
+	MqttStringConstruct(MqttStringConstruct&) = delete;
+	MqttStringConstruct(MqttStringConstruct&&) = delete;
 	const std::string data;
 	const std::string topic;
 };
@@ -99,6 +99,7 @@ public:
 	esp_err_t Publish(const char*, const char*, const uint8_t qos = 1, const bool retained = false) const;
 	esp_err_t Publish(const char*, const std::string&, const uint8_t qos = 1, const bool retained = false) const;
 	esp_err_t Publish(std::pair<std::string, std::string> data, const uint8_t qos = 1, const bool retained = false) const;
+	static esp_err_t PublishStaticPair(Mqtt * ptr, std::pair<std::string, std::string> data, const uint8_t qos = 1, const bool retained = false);
 	const std::string& GetTopicBase() const;
 	esp_err_t SetLastWill(const std::string& LwTopic, const std::string& lwMsg);
 	void ResetDisconnectionCounter();

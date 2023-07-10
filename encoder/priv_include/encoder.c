@@ -204,7 +204,7 @@ esp_err_t rotary_encoder_suspend(rotary_encoder_t *re)
         gpio_isr_handler_add(re->pin_a, ISR_resumeTimer, re);
         gpio_isr_handler_add(re->pin_b, ISR_resumeTimer, re);
         gpio_isr_handler_add(re->pin_btn, ISR_resumeTimer, re);
-        //ESP_LOGI("rotary", " suspending ");
+        ESP_LOGI("rotary", " suspending ");
         re->suspended = true;
         return ESP_OK;
     }
@@ -220,7 +220,7 @@ esp_err_t rotary_encoder_resume(rotary_encoder_t *re)
         gpio_isr_handler_remove(re->pin_btn);
         rotary_encoder_Timer_resume(re);
         re->suspended = false;
-        //ESP_LOGI("rotary", " resuming ");
+        ESP_LOGI("rotary", " resuming ");
         return ESP_OK;
     }
     return ESP_FAIL;

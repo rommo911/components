@@ -32,14 +32,6 @@ typedef int multi_heap_info_t;
 #include <vector>
 #include "esp_netif_ip_addr.h"
 
-typedef std::array<uint8_t, 64> Array_64_uint8_t;
-typedef std::array<uint8_t, 64> Array_64_uint16_t;
-typedef std::array<uint16_t, 16> HTPA_ImageLine_t;
-typedef std::array<uint16_t, 4> HTPA_ImageColumn_t;
-typedef std::array<uint16_t, 64> HTPA_image_u16_64_t;
-typedef std::array<int16_t, 64> HTPA_image_i16_64_t;
-typedef HTPA_image_i16_64_t HTPA_absTempSubMeanFifo_t;
-
 using namespace std::chrono;
 #define GET_NOW_MILLIS std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count()
 #define GET_NOW_SECONDS std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count()

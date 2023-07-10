@@ -11,6 +11,9 @@
 #include <sstream>
 #include <vector>
 #include <esp_log.h>
+#include <functional>
+#include "esp_err.h"
+
 #ifndef HOMEASSISTANT_PREFIX
 #define HOMEASSISTANT_PREFIX    "homeassistant" // Default MQTT prefix
 #endif
@@ -77,18 +80,19 @@ namespace homeassistant {
         static constexpr char sensor_t[] = "sensor";
     public:
 
-        Discovery(BaseDevCtx& ctx, const std::string& _hass_mqtt_device);
+        Discovery(const std::string& _hass_mqtt_device);
         virtual ~Discovery() {
         }
         void ProcessJson();
         void UpdateDevCtx();
-        const std::string DiscoveryTopic();
-        const std::string& AvailabilityTopic();
-        std::string StatusTopic();
-        std::string CommandTopic();
-        const std::string& DiscoveryMessage();
-        const  std::string& ConnectionTopic();
-        std::pair<std::string, std::string> GenerateDiscoveryData()
+        const std::string DiscoveryTopic() const;
+        const std::string& AvailabilityTopic() const;
+        const std::string StatusTopic() const;
+        const std::string CommandTopic() const;
+        const std::string& DiscoveryMessage() const;
+        const  std::string& ConnectionTopic() const;
+        const std::pair<std::string,std::string> AvailabilityMessage()const ;
+        const std::pair<std::string, std::string> GenerateDiscoveryData() const 
         {
             return std::make_pair(this->DiscoveryTopic(), this->DiscoveryMessage());
         }
@@ -96,17 +100,25 @@ namespace homeassistant {
         void DumpDebugAll();
     };
 
-    void UpdateDiscoveryList();
+    esp_err_t UpdateDiscoveryList();
+    esp_err_t PublishDiscovery_and_Available();
+    esp_err_t PublishAllStats();
+    extern std::vector<std::function<const std::pair<std::string,std::string>()>> statsGenerateFunctions;
+    extern std::function<esp_err_t(const std::pair<std::string,std::string>)> MqttPublishFunction;
+    extern std::function<esp_err_t(const std::pair<std::string,std::string>)> statsPublishDiscoveryFunction;
+    extern homeassistant::Device_Description_t hassDevCtxDescription;
+    extern homeassistant::BaseDevCtx thisDevideCtx;
     class RelayDiscovery : public Discovery {
     public:
-        RelayDiscovery(BaseDevCtx& ctx, const std::string& switch_name, const char* class_type) : Discovery(ctx, relay_t), _switch_name(switch_name), _class_type(class_type)
+        RelayDiscovery(const std::string& switch_name, const std::string& class_type) : Discovery(relay_t), _switch_name(switch_name), _class_type(class_type)
         {
         }
+        static constexpr char Switch[] = "Switch";
+
     private:
         void ProcessFinalJson();
-
-        std::string _switch_name;
-        std::string _class_type;
+        const std::string _switch_name;
+        const std::string _class_type;
     };
 
 
@@ -117,11 +129,11 @@ namespace homeassistant {
         void ProcessFinalJson();
 
     public:
-        BlindDiscovery(BaseDevCtx& ctx, const char* class_type) : Discovery(ctx, Discovery::cover_t), _class_type(class_type)
+        BlindDiscovery(const char* class_type) : Discovery(Discovery::cover_t), _class_type(class_type)
         {
         }
-        std::string GetSetPosTopic() { return  std::string(topics_prefix.str() + "/set_pos"); }
-        std::string GetPosTopic() { return  std::string(topics_prefix.str() + "/position"); }
+        const std::string GetSetPosTopic() const { return  std::string(topics_prefix.str() + "/set_pos"); }
+        const std::string GetPosTopic() const { return  std::string(topics_prefix.str() + "/position"); }
         static constexpr char	None[] = "None";
         static constexpr char	awning[] = "awning";
         static constexpr char	blind[] = "blind";
@@ -142,10 +154,10 @@ namespace homeassistant {
         void ProcessFinalJson();
 
     public:
-        SensorDiscovery(BaseDevCtx& ctx, const char* sensorClass, const std::string& unit) : Discovery(ctx, sensor_t), name(sensorClass), _sensorClass(sensorClass), __unit(unit)
+        SensorDiscovery(const char* sensorClass, const std::string& unit) : Discovery(sensor_t), name(sensorClass), _sensorClass(sensorClass), __unit(unit)
         {
         }
-        const std::string& GetClass() { return name; }
+        const std::string& GetClass() const { return name; }
         static constexpr char	aqi[] = "aqi";
         static constexpr char	battery[] = "battery";
         static constexpr char	carbon_dioxide[] = "carbon_dioxide";
@@ -183,10 +195,10 @@ namespace homeassistant {
         void ProcessFinalJson();
 
     public:
-        BinarySensorDiscovery(BaseDevCtx& ctx, const char* sensorClass) : Discovery(ctx, binary_sensor_t), name(sensorClass), _sensorClass(sensorClass)
+        BinarySensorDiscovery(const char* sensorClass) : Discovery(binary_sensor_t), name(sensorClass), _sensorClass(sensorClass)
         {
         }
-        const std::string& GetClass() { return name; }
+        const std::string& GetClass() const { return name; }
         static constexpr char	None[] = "None";
         static constexpr char	battery[] = "battery";
         static constexpr char	battery_charging[] = "battery_charging";

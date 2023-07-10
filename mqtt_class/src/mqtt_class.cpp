@@ -49,6 +49,8 @@ RTC_DATA_ATTR uint8_t Mqtt::disconnectionCounter;
  */
 Mqtt::Mqtt(EventLoop_p_t& eventLoop) : Loop(eventLoop)
 {
+	mqttRecieveDataQueue = xQueueCreate(10, sizeof(void*));
+
 	privateTopicList.clear();
 }
 
@@ -67,7 +69,6 @@ esp_err_t Mqtt::Init(const std::string& device, const esp_mqtt_client_config_t& 
 		LOGW(TAG, " Already initialized ! OK, will retry connection automatically");
 		return ESP_ERR_INVALID_STATE;
 	}
-	mqttRecieveDataQueue = xQueueCreate(10, sizeof(void*));
 	LoadFromNVS();
 	MqttUserConfig.activeAPIConfig = mqttCfg;
 	uint8_t mac[6];
@@ -191,6 +192,18 @@ esp_err_t Mqtt::Publish(std::pair<std::string, std::string> data, const uint8_t 
 		.length = data.second.length(),
 	};
 	return Publish(msg);
+}
+
+esp_err_t Mqtt::PublishStaticPair(Mqtt * ptr, std::pair<std::string, std::string> data, const uint8_t qos, const bool retained)
+{
+	MqttMsg_t msg = {
+		.retained = retained,
+		.qos = qos,
+		.payload = data.second.c_str(),
+		.topic = data.first.c_str(),
+		.length = data.second.length(),
+	};
+	return ptr->Publish(msg);
 }
 
 esp_err_t Mqtt::Publish(const char* topic, const std::string& data, const uint8_t qos, const bool retained) const
@@ -380,9 +393,8 @@ void Mqtt::DataHandlerStatic(const char* topicBuffer, const int topic_len, const
 void Mqtt::DataHandlerToQueue(const char* topicBuffer, const int topic_len, const char* dataBuffer, const int data_len)
 {
 	LOG_MQTT_V(TAG, " message HANDLER  %.*s, on topic %.*s", data_len, dataBuffer, topic_len, topicBuffer);
-	MqttRedirectMsg_tv2* const msg = new MqttRedirectMsg_tv2(topicBuffer, topic_len, dataBuffer, data_len);
-	// MqttRedirectMsg_tv2 *const p_but = msg;
-	auto ret = xQueueSend(this->mqttRecieveDataQueue, (void*)(&msg), pdMS_TO_TICKS(150));
+	MqttStringConstruct* const msg = new MqttStringConstruct(topicBuffer, topic_len, dataBuffer, data_len);
+	auto ret = xQueueSend(this->mqttRecieveDataQueue, (void*)(&msg), pdMS_TO_TICKS(200));
 	if (ret != pdPASS)
 	{
 		delete msg;
@@ -529,4 +541,4 @@ esp_err_t Mqtt::LoadFromNVS()
 	return ret;
 }
 
-std::shared_ptr<Mqtt> MqttDOL = nullptr;
+std::shared_ptr<Mqtt> MqttClass = nullptr;

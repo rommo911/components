@@ -19,7 +19,7 @@ LightSensor::LightSensor(EventLoop_p_t& EventLoop, adc1_channel_t _channel, cons
     Loop(EventLoop),
     channel(_channel)
 {
-    timer = std::make_unique<ESPTimer>(std::string(TAG), [&]() {this->TimerRun(); });
+    timer = std::make_unique<ESPTimer>([&]() {this->TimerRun(); }, std::string(TAG));
 
 }
 
