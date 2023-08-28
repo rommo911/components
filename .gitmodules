@@ -10,3 +10,15 @@
 [submodule "ArduinoJson"]
 	path = ArduinoJson
 	url = https://github.com/bblanchon/ArduinoJson.git
+[submodule "esp_littlefs"]
+	path = esp_littlefs
+	url = https://github.com/rommo911/esp_littlefs.git
+[submodule "lvgl"]
+	path = lvgl
+	url = https://github.com/lvgl/lvgl.git
+[submodule "lv_port_esp32"]
+	path = lv_port_esp32
+	url = https://github.com/rommo911/lv_port_esp32.git
+[submodule "json"]
+	path = json
+	url = https://github.com/nlohmann/json.git
