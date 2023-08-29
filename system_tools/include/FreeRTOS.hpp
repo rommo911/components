@@ -36,7 +36,7 @@
  *
  */
 
-class FreeRTOS
+class FreeRTOSV2
 {
 
 private:
@@ -120,13 +120,13 @@ public:
 };
 
 template <typename r, typename p>
-esp_err_t FreeRTOS::Timer::TimerStart(const std::chrono::duration<r, p> &timeout)
+esp_err_t FreeRTOSV2::Timer::TimerStart(const std::chrono::duration<r, p> &timeout)
 {
     if (m_TimerHandle != nullptr)
     {
         if (!TimerTaskIsRunning())
         {
-            this->SetPeriod(FreeRTOS::ToTicks(timeout));
+            this->SetPeriod(FreeRTOSV2::ToTicks(timeout));
             std::lock_guard<std::timed_mutex> __Lock(lock);
             BaseType_t ret = xTimerStart(m_TimerHandle, 0);
             return ret == pdPASS ? ESP_OK : ESP_FAIL;
@@ -140,13 +140,13 @@ esp_err_t FreeRTOS::Timer::TimerStart(const std::chrono::duration<r, p> &timeout
     return ESP_FAIL;
 }
 template <typename r, typename p>
-esp_err_t FreeRTOS::Timer::TimerRestart(const std::chrono::duration<r, p> &timeout)
+esp_err_t FreeRTOSV2::Timer::TimerRestart(const std::chrono::duration<r, p> &timeout)
 {
     if (m_TimerHandle != nullptr)
     {
         if (TimerTaskIsRunning())
             this->TimerStop();
-        this->SetPeriod(FreeRTOS::ToTicks(timeout));
+        this->SetPeriod(FreeRTOSV2::ToTicks(timeout));
         std::lock_guard<std::timed_mutex> __Lock(lock);
         BaseType_t ret = xTimerStart(m_TimerHandle, 0);
         return ret == pdPASS ? ESP_OK : ESP_FAIL;
@@ -155,13 +155,13 @@ esp_err_t FreeRTOS::Timer::TimerRestart(const std::chrono::duration<r, p> &timeo
 }
 
 template <typename r, typename p>
-esp_err_t FreeRTOS::Timer::SetPeriod(const std::chrono::duration<r, p> &timeout)
+esp_err_t FreeRTOSV2::Timer::SetPeriod(const std::chrono::duration<r, p> &timeout)
 {
     if (m_TimerHandle != nullptr)
     {
         std::lock_guard<std::timed_mutex> __Lock(lock);
         this->period = timeout;
-        return xTimerChangePeriod(m_TimerHandle, FreeRTOS::ToTicks(period), 50) == pdPASS ? ESP_OK : ESP_FAIL;
+        return xTimerChangePeriod(m_TimerHandle, FreeRTOSV2::ToTicks(period), 50) == pdPASS ? ESP_OK : ESP_FAIL;
     }
     return ESP_FAIL;
 }

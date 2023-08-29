@@ -16,7 +16,7 @@
 [submodule "lvgl"]
 	path = lvgl
 	url = https://github.com/lvgl/lvgl.git
-[submodule "json"]
+[submodule "nlohmann_json"]
 	path = json
 	url = https://github.com/nlohmann/json.git
 [submodule "lvgl_esp32_drivers"]

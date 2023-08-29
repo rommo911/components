@@ -20,7 +20,7 @@ static const char *TAG = "FreeRTOS";
  * Sleep for the specified number of milliseconds.
  * @param[in] ms The period in milliseconds for which to sleep.
  */
-void FreeRTOS::sleep(uint32_t ms)
+void FreeRTOSV2::sleep(uint32_t ms)
 {
 	::vTaskDelay(ms / portTICK_PERIOD_MS);
 } // sleep
@@ -32,7 +32,7 @@ void FreeRTOS::sleep(uint32_t ms)
  * @param[in] param An optional parameter to be passed to the started task.
  * @param[in] stackSize An optional paremeter supplying the size of the stack in which to run the task.
  */
-esp_err_t FreeRTOS::StartTask(void task(void *), const char *taskName, uint32_t stackSize, void *param, UBaseType_t uxPriority, TaskHandle_t *const pvCreatedTask, const BaseType_t xCoreID)
+esp_err_t FreeRTOSV2::StartTask(void task(void *), const char *taskName, uint32_t stackSize, void *param, UBaseType_t uxPriority, TaskHandle_t *const pvCreatedTask, const BaseType_t xCoreID)
 {
 #ifdef ESP_PLATFORM
 	if (xTaskCreatePinnedToCore(task, taskName, stackSize, param, uxPriority, pvCreatedTask, xCoreID) == pdPASS)
@@ -53,7 +53,7 @@ esp_err_t FreeRTOS::StartTask(void task(void *), const char *taskName, uint32_t 
  * Get the time in milliseconds since the %FreeRTOS scheduler started.
  * @return The time in milliseconds since the %FreeRTOS scheduler started.
  */
-uint32_t FreeRTOS::millis()
+uint32_t FreeRTOSV2::millis()
 {
 	return (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
 } // getTimeSinceStart
@@ -68,7 +68,7 @@ uint32_t FreeRTOS::millis()
  * @param cb  callback to be called
  * @return TimerHandle_t
  */
-esp_err_t FreeRTOS::Timer::Create()
+esp_err_t FreeRTOSV2::Timer::Create()
 {
 	if (m_TimerHandle != nullptr)
 		return ESP_OK;
@@ -91,7 +91,7 @@ esp_err_t FreeRTOS::Timer::Create()
  *
  * @return esp_err_t
  */
-esp_err_t FreeRTOS::Timer::TimerStop()
+esp_err_t FreeRTOSV2::Timer::TimerStop()
 {
 	if (TimerTaskIsRunning())
 	{
@@ -102,7 +102,7 @@ esp_err_t FreeRTOS::Timer::TimerStop()
 	return ESP_ERR_INVALID_STATE;
 }
 
-esp_err_t FreeRTOS::Timer::TimerStart()
+esp_err_t FreeRTOSV2::Timer::TimerStart()
 {
 	if (period.count() == 0)
 		return ESP_ERR_INVALID_STATE;
@@ -123,7 +123,7 @@ esp_err_t FreeRTOS::Timer::TimerStart()
 	return ESP_FAIL;
 }
 
-esp_err_t FreeRTOS::Timer::SetFunction(std::function<void()> fn, bool _periodic)
+esp_err_t FreeRTOSV2::Timer::SetFunction(std::function<void()> fn, bool _periodic)
 {
 	if (fn == nullptr)
 		return ESP_ERR_INVALID_ARG;
@@ -137,9 +137,9 @@ esp_err_t FreeRTOS::Timer::SetFunction(std::function<void()> fn, bool _periodic)
  *
  * @param arg
  */
-void FreeRTOS::Timer::TimerStaticCB(TimerHandle_t arg)
+void FreeRTOSV2::Timer::TimerStaticCB(TimerHandle_t arg)
 {
-	FreeRTOS::Timer *_this = static_cast<FreeRTOS::Timer *>(pvTimerGetTimerID(arg));
+	FreeRTOSV2::Timer *_this = static_cast<FreeRTOSV2::Timer *>(pvTimerGetTimerID(arg));
 	std::lock_guard<std::timed_mutex> __Lock(_this->lock);
 	_this->timerRunFn();
 }
@@ -150,7 +150,7 @@ void FreeRTOS::Timer::TimerStaticCB(TimerHandle_t arg)
  * @return true
  * @return false
  */
-bool FreeRTOS::Timer::TimerTaskIsRunning() const
+bool FreeRTOSV2::Timer::TimerTaskIsRunning() const
 {
 	return xTimerIsTimerActive(m_TimerHandle);
 }
@@ -161,7 +161,7 @@ bool FreeRTOS::Timer::TimerTaskIsRunning() const
  * @param handle
  * @return esp_err_t
  */
-esp_err_t FreeRTOS::Timer::TimerDeinit()
+esp_err_t FreeRTOSV2::Timer::TimerDeinit()
 {
 	if (TimerTaskIsRunning())
 	{
@@ -180,7 +180,7 @@ esp_err_t FreeRTOS::Timer::TimerDeinit()
 	return ESP_OK;
 }
 
-esp_err_t FreeRTOS::Timer::TimerRestart()
+esp_err_t FreeRTOSV2::Timer::TimerRestart()
 {
 	if (period.count() == 0)
 		return ESP_ERR_INVALID_STATE;
@@ -202,7 +202,7 @@ esp_err_t FreeRTOS::Timer::TimerRestart()
  *
  * @return int
  */
-int FreeRTOS::GetRunningTaskNum()
+int FreeRTOSV2::GetRunningTaskNum()
 {
 	return uxTaskGetNumberOfTasks();
 }
@@ -212,7 +212,7 @@ int FreeRTOS::GetRunningTaskNum()
  *
  * @return std::string
  */
-std::string FreeRTOS::GetTaskList()
+std::string FreeRTOSV2::GetTaskList()
 {
 #if (configUSE_TRACE_FACILITY == 1)
 	char pcWriteBuffer[40 * 20]; // 40 char /task * 40 task ?

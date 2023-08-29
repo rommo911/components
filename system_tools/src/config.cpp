@@ -267,7 +267,7 @@ esp_err_t Config::ParseJsonToCommands(const json &j_parent)
                 else if (sub_json.key() == "system_request_reboot")
                 {
                     actionResponse = (" Command to reboot OK");
-                    FreeRTOS::StartTask([](void *arg)
+                    FreeRTOSV2::StartTask([](void *arg)
                                         { std::this_thread::sleep_for(10s); esp_restart(); });
                     return ESP_OK;
                 }
